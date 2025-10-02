@@ -1,0 +1,188 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: nrsgirls-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nrsgirls}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-nrsgirls}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - nrsgirls-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nrsgirls}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:6
+    container_name: nrsgirls-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-nrsgirls}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - nrsgirls-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nrsgirls-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - nrsgirls-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  api:
+    build:
+      context: ./backend/api
+      dockerfile: Dockerfile
+    container_name: nrsgirls-api
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nrsgirls}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nrsgirls}
+      MONGODB_URI: mongodb://${MONGO_USER:-nrsgirls}:${MONGO_PASSWORD}@mongodb:27017/nrsgirls?authSource=admin
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+    volumes:
+      - ./backend/api:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nrsgirls-network
+    restart: unless-stopped
+
+  # ClamAV Virus Scanner
+  clamav:
+    image: clamav/clamav:latest
+    container_name: nrsgirls-clamav
+    volumes:
+      - clamav_data:/var/lib/clamav
+    ports:
+      - "3310:3310"
+    networks:
+      - nrsgirls-network
+    restart: unless-stopped
+
+  # RTMP Streaming Server
+  rtmp:
+    build:
+      context: ./backend/streaming
+      dockerfile: Dockerfile.rtmp
+    container_name: nrsgirls-rtmp
+    environment:
+      STREAM_KEY_VALIDATION_URL: http://api:3000/api/v1/stream/validate
+    ports:
+      - "1935:1935"
+      - "8080:8080"
+    volumes:
+      - streaming_data:/tmp/hls
+    networks:
+      - nrsgirls-network
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Frontend (Development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: nrsgirls-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+      NEXT_PUBLIC_STREAM_URL: ${NEXT_PUBLIC_STREAM_URL:-rtmp://localhost:1935}
+      NEXT_PUBLIC_WEBSOCKET_URL: ${NEXT_PUBLIC_WEBSOCKET_URL:-ws://localhost:3000}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3001:3000"
+    depends_on:
+      - api
+    networks:
+      - nrsgirls-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: nrsgirls-nginx
+    volumes:
+      - ./deployment/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deployment/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - nrsgirls-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  clamav_data:
+    driver: local
+  streaming_data:
+    driver: local
+
+networks:
+  nrsgirls-network:
+    driver: bridge
+
+# Production overrides
+# Use: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
