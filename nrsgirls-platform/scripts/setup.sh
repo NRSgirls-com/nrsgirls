@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 echo "== nrsgirls setup.sh =="
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 # Load .env.example
 if [ -f .env.example ] && [ ! -f .env ]; then
@@ -28,7 +28,10 @@ install_if_pkg() {
     fi
   fi
 }
-install_if_pkg frontend
-install_if_pkg backend
+# Install platform frontend/backend if they exist
+install_if_pkg nrsgirls-platform/frontend
+install_if_pkg nrsgirls-platform/backend
+# Install root-level frontend/nextjs
+install_if_pkg frontend/nextjs
 echo "Setup complete. Edit .env and run the services you need.
 "
