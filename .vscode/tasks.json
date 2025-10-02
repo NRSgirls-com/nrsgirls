@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Setup: Run setup.sh",
+      "type": "shell",
+      "command": "bash nrsgirls-platform/scripts/setup.sh",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Frontend: Build",
+      "type": "shell",
+      "command": "bash nrsgirls-platform/scripts/build-frontend.sh",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Frontend: Dev Server",
+      "type": "shell",
+      "command": "cd frontend/nextjs && npm run dev",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Docker: Start Compose",
+      "type": "shell",
+      "command": "bash nrsgirls-platform/scripts/deploy.sh dev",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint and Test",
+      "type": "shell",
+      "command": "bash nrsgirls-platform/scripts/lint-test.sh",
+      "problemMatcher": []
+    }
+  ]
+}
