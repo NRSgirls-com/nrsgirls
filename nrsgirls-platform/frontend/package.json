@@ -1,0 +1,28 @@
+{
+  "name": "nrsgirls-frontend",
+  "version": "1.0.0",
+  "description": "NRS Girls Platform Frontend",
+  "private": true,
+  "workspaces": [
+    "homepage",
+    "dj-portal", 
+    "performer-portal",
+    "shared-components"
+  ],
+  "scripts": {
+    "dev": "concurrently \"yarn workspace homepage dev\" \"yarn workspace dj-portal dev\" \"yarn workspace performer-portal dev\"",
+    "build": "yarn workspace shared-components build && yarn workspace homepage build && yarn workspace dj-portal build && yarn workspace performer-portal build",
+    "lint": "yarn workspaces run lint",
+    "test": "yarn workspaces run test",
+    "clean": "yarn workspaces run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "name": "nrsgirls-api",
+  "version": "1.0.0",
+  "description": "NRS Girls Platform API Server",
+  "main": "dist/server.js",
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "tsx watch api/src/server.ts",
+    "build": "tsc",
+    "lint": "eslint src --ext .ts",
+    "test": "jest",
+    "migrate": "knex migrate:latest",
+    "seed": "knex seed:run",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "multer": "^1.4.5-lts.1",
+    "knex": "^3.0.1",
+    "pg": "^8.11.3",
+    "joi": "^17.10.2",
+    "express-rate-limit": "^7.1.2",
+    "winston": "^3.10.0",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1",
+    "sharp": "^0.32.6",
+    "nodemailer": "^6.9.7"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.18",
+    "@types/cors": "^2.8.14",
+    "@types/jsonwebtoken": "^9.0.3",
+    "@types/bcryptjs": "^2.4.4",
+    "@types/multer": "^1.4.8",
+    "@types/pg": "^8.10.7",
+    "@types/uuid": "^9.0.5",
+    "@types/nodemailer": "^6.4.13",
+    "@types/node": "^20.8.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "eslint": "^8.50.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.5",
+    "ts-jest": "^29.1.1",
+    "tsx": "^3.13.0",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
