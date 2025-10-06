@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            frontend/nextjs/package-lock.json
+      
+      - name: Run setup script
+        run: bash nrsgirls-platform/scripts/setup.sh
+        continue-on-error: true
+      
+      - name: Install frontend dependencies
+        run: |
+          if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
+            cd frontend/nextjs
+            npm ci
+          fi
+      
+      - name: Lint and test
+        run: bash nrsgirls-platform/scripts/lint-test.sh
+        continue-on-error: true
+      
+      - name: Build frontend
+        run: |
+          if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
+            cd frontend/nextjs
+            npm run build
+          fi

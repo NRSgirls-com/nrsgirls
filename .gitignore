@@ -1,10 +1,15 @@
 node_modules/
 .env
+.env.local
+.env.*.local
 /dist
 /build
 .DS_Store
 .idea/
-.vscode/
 coverage/
 logs/
 *.log
+.next/
+out/
+*.tsbuildinfo
+.vercel
