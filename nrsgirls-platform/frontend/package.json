@@ -21,6 +21,10 @@
     "@types/node": "^20.8.0",
     "typescript": "^5.2.2"
   },
+  "overrides": {
+    "vite": "^7.1.9",
+    "esbuild": "^0.25.10"
+  },
   "engines": {
     "node": ">=18.0.0",
     "yarn": ">=1.22.0"
