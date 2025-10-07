@@ -10,11 +10,11 @@
     "shared-components"
   ],
   "scripts": {
-    "dev": "concurrently \"yarn workspace homepage dev\" \"yarn workspace dj-portal dev\" \"yarn workspace performer-portal dev\"",
-    "build": "yarn workspace shared-components build && yarn workspace homepage build && yarn workspace dj-portal build && yarn workspace performer-portal build",
-    "lint": "yarn workspaces run lint",
-    "test": "yarn workspaces run test",
-    "clean": "yarn workspaces run clean && rm -rf node_modules"
+    "dev": "concurrently \"npx yarn workspace homepage dev\" \"npx yarn workspace dj-portal dev\" \"npx yarn workspace performer-portal dev\"",
+    "build": "npx yarn workspaces run build",
+    "lint": "npx yarn workspaces run lint",
+    "test": "npx yarn workspaces run test",
+    "clean": "npx yarn workspaces run clean && rm -rf node_modules"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
