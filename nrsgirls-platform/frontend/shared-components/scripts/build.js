@@ -14,13 +14,6 @@ function run(command, args) {
   }
 }
 
-const hasTsconfig = existsSync(path.join(cwd, 'tsconfig.json'));
-if (hasTsconfig) {
-  run(npxBin, ['tsc', '--build']);
-} else {
-  console.log('Skipping TypeScript build; no tsconfig.json found.');
-}
-
 const viteConfigCandidates = [
   'vite.config.ts',
   'vite.config.mts',
@@ -32,4 +25,11 @@ if (hasViteConfig) {
   run(npxBin, ['vite', 'build']);
 } else {
   console.log('Skipping Vite build; no Vite configuration file detected.');
+}
+
+const tsconfigPath = path.join(cwd, 'tsconfig.json');
+if (existsSync(tsconfigPath)) {
+  run(npxBin, ['tsc', '-p', tsconfigPath]);
+} else {
+  console.log('Skipping TypeScript build; no tsconfig.json found.');
 }
