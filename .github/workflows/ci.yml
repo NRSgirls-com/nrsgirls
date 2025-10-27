@@ -15,12 +15,17 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Node.js 18
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+          cache: 'yarn'
           cache-dependency-path: |
-            frontend/nextjs/package-lock.json
+            frontend/nextjs/yarn.lock
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@1.22.22 --activate
 
       - name: Run setup script
         run: |
@@ -32,7 +37,7 @@ jobs:
         run: |
           if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
             cd frontend/nextjs
-            npm ci
+            yarn install --frozen-lockfile
           fi
 
       - name: Lint and test frontend
@@ -45,5 +50,5 @@ jobs:
         run: |
           if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
             cd frontend/nextjs
-            npm run build
+            yarn build
           fi
