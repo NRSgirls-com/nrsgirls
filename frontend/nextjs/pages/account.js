@@ -1,5 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 
 export default function Account() {
   // In a real app, fetch subscription status from API
@@ -12,76 +14,83 @@ export default function Account() {
   return (
     <>
       <Head>
-        <title>Account - NRSgirls</title>
+        <title>My Account - NRSgirls</title>
       </Head>
-      <main style={styles.main}>
-        <div style={styles.container}>
-          <Link href="/" style={styles.backLink}>
-            ← Back to Home
-          </Link>
-          <h1 style={styles.title}>My Account</h1>
-          <div style={styles.card}>
-            <h2 style={styles.cardTitle}>Subscription Status</h2>
-            <div style={styles.statusContainer}>
-              <div style={styles.statusRow}>
-                <span style={styles.label}>Status:</span>
-                <span
-                  style={{
-                    ...styles.value,
-                    color: subscriptionStatus.isActive ? '#4ade80' : '#ff4444',
-                  }}
-                >
-                  {subscriptionStatus.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div style={styles.statusRow}>
-                <span style={styles.label}>Plan:</span>
-                <span style={styles.value}>{subscriptionStatus.plan}</span>
-              </div>
-              {subscriptionStatus.nextBillingDate && (
+      <div style={styles.pageWrapper}>
+        <Header />
+        <main style={styles.main}>
+          <div style={styles.container}>
+            <h1 style={styles.title}>My Account</h1>
+
+            <div style={styles.card}>
+              <h2 style={styles.cardTitle}>Subscription Status</h2>
+              <div style={styles.statusContainer}>
                 <div style={styles.statusRow}>
-                  <span style={styles.label}>Next Billing:</span>
-                  <span style={styles.value}>
-                    {subscriptionStatus.nextBillingDate}
+                  <span style={styles.label}>Status:</span>
+                  <span
+                    style={{
+                      ...styles.value,
+                      color: subscriptionStatus.isActive ? '#4ade80' : '#ff4444',
+                    }}
+                  >
+                    {subscriptionStatus.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
+                <div style={styles.statusRow}>
+                  <span style={styles.label}>Plan:</span>
+                  <span style={styles.value}>{subscriptionStatus.plan}</span>
+                </div>
+                {subscriptionStatus.nextBillingDate && (
+                  <div style={styles.statusRow}>
+                    <span style={styles.label}>Next Billing:</span>
+                    <span style={styles.value}>
+                      {subscriptionStatus.nextBillingDate}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {!subscriptionStatus.isActive && (
+                <Link href="/pricing" style={styles.button}>
+                  Subscribe Now
+                </Link>
               )}
             </div>
-            {!subscriptionStatus.isActive && (
-              <Link href="/pricing" style={styles.button}>
-                Subscribe Now
-              </Link>
-            )}
+
+            <div style={styles.card}>
+              <h2 style={styles.cardTitle}>Account Settings</h2>
+              <p style={styles.comingSoon}>
+                Profile settings, privacy controls, and notification preferences
+                coming soon.
+              </p>
+            </div>
+
+            <p style={styles.note}>
+              Note: Full account management features will be available after
+              authentication is implemented.
+            </p>
           </div>
-          <p style={styles.note}>
-            Note: This is a placeholder page. In production, this would fetch
-            real subscription data from the API.
-          </p>
-        </div>
-      </main>
+        </main>
+        <Footer />
+      </div>
     </>
   );
 }
 
 const styles = {
-  main: {
+  pageWrapper: {
     minHeight: '100vh',
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'column',
     backgroundColor: '#0f0f0f',
     color: '#ffffff',
-    padding: '2rem',
+  },
+  main: {
+    flex: 1,
+    padding: '3rem 1rem',
   },
   container: {
     maxWidth: '600px',
-    width: '100%',
-  },
-  backLink: {
-    color: '#0070f3',
-    textDecoration: 'none',
-    display: 'inline-block',
-    marginBottom: '2rem',
+    margin: '0 auto',
   },
   title: {
     fontSize: '2.5rem',
@@ -92,12 +101,13 @@ const styles = {
     backgroundColor: '#1a1a1a',
     padding: '2rem',
     borderRadius: '1rem',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-    marginBottom: '1rem',
+    border: '1px solid #333',
+    marginBottom: '1.5rem',
   },
   cardTitle: {
-    fontSize: '1.75rem',
+    fontSize: '1.5rem',
     marginBottom: '1.5rem',
+    color: '#ffffff',
   },
   statusContainer: {
     marginBottom: '2rem',
@@ -106,9 +116,11 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     marginBottom: '1rem',
+    padding: '0.5rem 0',
+    borderBottom: '1px solid #222',
   },
   label: {
-    color: '#cccccc',
+    color: '#888888',
   },
   value: {
     fontWeight: 'bold',
@@ -117,7 +129,7 @@ const styles = {
     display: 'block',
     width: '100%',
     padding: '1rem',
-    backgroundColor: '#0070f3',
+    backgroundColor: '#ff3366',
     color: '#ffffff',
     textDecoration: 'none',
     textAlign: 'center',
@@ -126,9 +138,13 @@ const styles = {
     fontWeight: 'bold',
     transition: 'background-color 0.2s',
   },
+  comingSoon: {
+    color: '#888888',
+    fontStyle: 'italic',
+  },
   note: {
     fontSize: '0.875rem',
-    color: '#888888',
+    color: '#666666',
     textAlign: 'center',
     fontStyle: 'italic',
   },
