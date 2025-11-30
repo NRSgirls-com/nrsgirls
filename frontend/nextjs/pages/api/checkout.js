@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { z } from 'zod';
 
 /**
  * Stripe Checkout API Route
@@ -18,6 +19,11 @@ import Stripe from 'stripe';
  * - Test card: 4242 4242 4242 4242, any future expiry, any CVC
  */
 
+// Request body validation schema
+const CheckoutRequestSchema = z.object({
+  priceId: z.string().min(1, 'Price ID is required'),
+});
+
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -33,13 +39,16 @@ export default async function handler(req, res) {
     });
   }
 
-  // Validate request body
-  const { priceId } = req.body;
-  if (!priceId || typeof priceId !== 'string') {
+  // Validate request body with Zod
+  const validationResult = CheckoutRequestSchema.safeParse(req.body);
+  if (!validationResult.success) {
     return res.status(400).json({
-      error: 'Missing or invalid priceId in request body',
+      error: 'Invalid request body',
+      details: validationResult.error.errors,
     });
   }
+
+  const { priceId } = validationResult.data;
 
   try {
     // Initialize Stripe with secret key
