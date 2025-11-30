@@ -9,6 +9,7 @@ This repo contains the early scaffolding for a Chaturbate-class platform with ou
 - 📘 Month 1 plan: [`/docs/onboarding/month-01/README.md`](docs/onboarding/month-01/README.md)
 - ✅ Best practices: [`/docs/best-practices/README.md`](docs/best-practices/README.md)
 - ☑️ Checklists (PRs, Security, Release): [`/docs/checklists`](docs/checklists)
+- 🔄 Next.js 16 upgrade notes: [`/docs/tech-updates/nextjs16-upgrade.md`](docs/tech-updates/nextjs16-upgrade.md)
 
 ## Minimum dev stack
 - Node.js LTS + pnpm
