@@ -11,13 +11,15 @@ export default function Pricing() {
     setError('');
 
     try {
+      const priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID || 'price_example';
+      
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId: 'price_example', // Placeholder price ID
+          priceId: priceId,
         }),
       });
 
