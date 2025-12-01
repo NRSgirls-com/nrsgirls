@@ -1,0 +1,25 @@
+{
+  "name": "@nrsgirls/shared-components",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared UI components for NRSgirls platform",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "echo 'No dev script configured yet'",
+    "build": "echo 'No build script configured yet - components pending implementation'",
+    "lint": "echo 'No lint script configured yet'"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "nrsgirls",
+    "components",
+    "react",
+    "ui"
+  ]
+}
