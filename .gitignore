@@ -1,4 +1,6 @@
 node_modules/
+.yarn/
+.yarnrc.yml
 .env
 .env.local
 .env.*.local
