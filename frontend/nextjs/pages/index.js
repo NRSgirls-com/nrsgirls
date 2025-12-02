@@ -22,6 +22,9 @@ export default function Home() {
             <Link href="/account" style={styles.buttonSecondary}>
               My Account
             </Link>
+            <Link href="/mixcloud" style={styles.buttonSecondary}>
+              Mixcloud Profile
+            </Link>
           </div>
         </div>
       </main>
