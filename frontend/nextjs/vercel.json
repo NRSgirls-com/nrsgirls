@@ -1,0 +1,45 @@
+{
+  "version": 2,
+  "framework": "nextjs",
+  "buildCommand": "yarn build",
+  "devCommand": "yarn dev --port $PORT",
+  "installCommand": "yarn install",
+  "outputDirectory": ".next",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "https://nrsgirls.com"
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/index-neon",
+      "destination": "/index-neon.html"
+    },
+    {
+      "source": "/index-professional",
+      "destination": "/index-professional.html"
+    }
+  ]
+}
