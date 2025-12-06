@@ -22,6 +22,9 @@ export default function Home() {
             <Link href="/account" style={styles.buttonSecondary}>
               My Account
             </Link>
+            <Link href="/help" style={styles.buttonSecondary}>
+              Help Center
+            </Link>
           </div>
         </div>
       </main>
