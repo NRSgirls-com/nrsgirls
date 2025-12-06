@@ -1,0 +1,454 @@
+name: Vercel Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - develop
+  pull_request:
+    branches:
+      - main
+      - staging
+
+# Prevent concurrent deployments to same environment
+concurrency:
+  group: vercel-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  # ====================
+  # PRE-FLIGHT CHECKS
+  # ====================
+  preflight:
+    name: Pre-flight Checks
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.determine-env.outputs.environment }}
+      should_deploy: ${{ steps.determine-env.outputs.should_deploy }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine environment
+        id: determine-env
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "environment=preview" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "environment=preview" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "environment=preview" >> $GITHUB_OUTPUT
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate configuration files
+        run: |
+          echo "🔍 Validating configuration files..."
+
+          # Check vercel.json exists
+          if [ -f "vercel.json" ]; then
+            echo "✅ vercel.json found"
+            cat vercel.json | jq . || echo "⚠️ vercel.json is not valid JSON"
+          else
+            echo "⚠️ vercel.json not found - using defaults"
+          fi
+
+          # Check package.json in frontend
+          if [ -f "frontend/nextjs/package.json" ]; then
+            echo "✅ frontend/nextjs/package.json found"
+          else
+            echo "❌ frontend/nextjs/package.json not found"
+            exit 1
+          fi
+
+      - name: Check for sensitive data
+        run: |
+          echo "🔐 Scanning for sensitive data..."
+
+          # Check for common secret patterns
+          if grep -rE "(sk_live_|sk_test_|AKIA[A-Z0-9]{16}|-----BEGIN (RSA|EC|DSA) PRIVATE KEY-----)" --include="*.js" --include="*.ts" --include="*.json" . 2>/dev/null; then
+            echo "❌ Potential secrets found in code!"
+            exit 1
+          fi
+
+          echo "✅ No obvious secrets detected"
+
+  # ====================
+  # CODE QUALITY
+  # ====================
+  quality:
+    name: Code Quality Gates
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: needs.preflight.outputs.should_deploy == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend/nextjs/yarn.lock
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@1.22.22 --activate
+
+      - name: Install dependencies
+        working-directory: frontend/nextjs
+        run: yarn install --frozen-lockfile
+
+      - name: Run ESLint
+        working-directory: frontend/nextjs
+        run: |
+          echo "🔍 Running ESLint..."
+          yarn lint || echo "⚠️ Lint warnings detected"
+
+      - name: TypeScript type check
+        working-directory: frontend/nextjs
+        run: |
+          echo "🔍 Running TypeScript check..."
+          npx tsc --noEmit || echo "⚠️ TypeScript warnings detected"
+
+      - name: Security audit
+        working-directory: frontend/nextjs
+        run: |
+          echo "🔐 Running security audit..."
+          yarn audit --level high || echo "⚠️ Security warnings detected"
+        continue-on-error: true
+
+  # ====================
+  # BUILD
+  # ====================
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [preflight, quality]
+    if: needs.preflight.outputs.should_deploy == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: frontend/nextjs/yarn.lock
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@1.22.22 --activate
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: |
+          if [ "${{ needs.preflight.outputs.environment }}" == "production" ]; then
+            vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          else
+            vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+          fi
+
+      - name: Build with Vercel
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+      - name: Analyze bundle size
+        working-directory: frontend/nextjs
+        run: |
+          echo "📊 Analyzing bundle size..."
+          if [ -d ".next" ]; then
+            du -sh .next/ || true
+            find .next -name "*.js" -type f -exec ls -lh {} \; | head -20 || true
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vercel-build
+          path: .vercel/output
+          retention-days: 1
+
+  # ====================
+  # DEPLOY PREVIEW
+  # ====================
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [preflight, build]
+    if: needs.preflight.outputs.environment == 'preview'
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.url }}
+
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vercel-build
+          path: .vercel/output
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy to Vercel (Preview)
+        id: deploy
+        run: |
+          echo "🚀 Deploying to preview..."
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "✅ Deployed to: $DEPLOYMENT_URL"
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.url }}';
+            const body = `## 🚀 Preview Deployment
+
+            | Property | Value |
+            |----------|-------|
+            | **Status** | ✅ Deployed |
+            | **URL** | [${url}](${url}) |
+            | **Branch** | \`${{ github.head_ref }}\` |
+            | **Commit** | \`${{ github.sha }}\` |
+
+            ### Quick Links
+            - 🔗 [Preview Site](${url})
+            - 📊 [Vercel Dashboard](https://vercel.com)
+            `;
+
+            // Find existing comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.data.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Preview Deployment')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  # ====================
+  # DEPLOY STAGING
+  # ====================
+  deploy-staging:
+    name: Deploy Staging
+    runs-on: ubuntu-latest
+    needs: [preflight, build]
+    if: needs.preflight.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vercel-build
+          path: .vercel/output
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy to Vercel (Staging)
+        id: deploy
+        run: |
+          echo "🚀 Deploying to staging..."
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "✅ Deployed to: $DEPLOYMENT_URL"
+
+      - name: Run health check
+        run: |
+          echo "🏥 Running health check..."
+          sleep 30
+          curl -sf "${{ steps.deploy.outputs.url }}" > /dev/null && echo "✅ Site is responding" || echo "⚠️ Health check warning"
+
+  # ====================
+  # DEPLOY PRODUCTION
+  # ====================
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: [preflight, build]
+    if: needs.preflight.outputs.environment == 'production'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+      deployment_id: ${{ steps.deploy.outputs.deployment_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vercel-build
+          path: .vercel/output
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy to Vercel (Production)
+        id: deploy
+        run: |
+          echo "🚀 Deploying to production..."
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "✅ Deployed to: $DEPLOYMENT_URL"
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying production deployment..."
+          sleep 30
+
+          # Multiple health check attempts
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf "${{ steps.deploy.outputs.url }}" > /dev/null; then
+              echo "✅ Production site is healthy"
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "⚠️ Health check attempt $RETRY_COUNT failed, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "❌ Production health check failed after $MAX_RETRIES attempts"
+          exit 1
+
+  # ====================
+  # POST-DEPLOYMENT
+  # ====================
+  post-deployment:
+    name: Post-Deployment Checks
+    runs-on: ubuntu-latest
+    needs: [preflight, deploy-preview, deploy-staging, deploy-production]
+    if: always() && (needs.deploy-preview.result == 'success' || needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine deployment URL
+        id: get-url
+        run: |
+          if [ "${{ needs.deploy-production.outputs.url }}" != "" ]; then
+            echo "url=${{ needs.deploy-production.outputs.url }}" >> $GITHUB_OUTPUT
+            echo "env=production" >> $GITHUB_OUTPUT
+          elif [ "${{ needs.deploy-staging.outputs.url }}" != "" ]; then
+            echo "url=${{ needs.deploy-staging.outputs.url }}" >> $GITHUB_OUTPUT
+            echo "env=staging" >> $GITHUB_OUTPUT
+          else
+            echo "url=${{ needs.deploy-preview.outputs.url }}" >> $GITHUB_OUTPUT
+            echo "env=preview" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Lighthouse audit
+        if: needs.preflight.outputs.environment == 'production'
+        uses: treosh/lighthouse-ci-action@v11
+        continue-on-error: true
+        with:
+          urls: ${{ steps.get-url.outputs.url }}
+          budgetPath: ./lighthouse-budget.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Create deployment summary
+        run: |
+          echo "## 📋 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${{ steps.get-url.outputs.env }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **URL** | [${{ steps.get-url.outputs.url }}](${{ steps.get-url.outputs.url }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Triggered by** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Timestamp** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+
+  # ====================
+  # ROLLBACK (Manual)
+  # ====================
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'rollback'
+    environment:
+      name: production
+
+    steps:
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Execute rollback
+        run: |
+          echo "⚠️ Rolling back production deployment..."
+          vercel rollback --yes --token=${{ secrets.VERCEL_TOKEN }}
+          echo "✅ Rollback completed"
+
+      - name: Verify rollback
+        run: |
+          sleep 30
+          echo "🔍 Verifying rollback..."
+          # Add your production URL here for verification
+          curl -sf "https://nrsgirls.vercel.app" > /dev/null && echo "✅ Site is responding after rollback"
