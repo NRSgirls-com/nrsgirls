@@ -1,8 +1,11 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "cd frontend/nextjs && yarn install && yarn build",
+  "buildCommand": "cd frontend/nextjs && yarn build",
   "outputDirectory": "frontend/nextjs/.next",
   "installCommand": "cd frontend/nextjs && yarn install",
-  "devCommand": "cd frontend/nextjs && yarn dev"
+  "devCommand": "cd frontend/nextjs && yarn dev",
+  "git": {
+    "deploymentEnabled": true
+  }
 }
