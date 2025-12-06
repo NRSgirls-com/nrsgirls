@@ -9,7 +9,7 @@ export default function Home() {
         <meta name="description" content="Premium DJ content platform" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
-      <main style={styles.main}>
+      <div style={styles.hero}>
         <div style={styles.container}>
           <h1 style={styles.title}>Welcome to NRSgirls</h1>
           <p style={styles.description}>
@@ -22,24 +22,19 @@ export default function Home() {
             <Link href="/account" style={styles.buttonSecondary}>
               My Account
             </Link>
-            <Link href="/help" style={styles.buttonSecondary}>
-              Help Center
-            </Link>
           </div>
         </div>
-      </main>
+      </div>
     </>
   );
 }
 
 const styles = {
-  main: {
-    minHeight: '100vh',
+  hero: {
+    minHeight: 'calc(100vh - 70px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0f0f0f',
-    color: '#ffffff',
   },
   container: {
     textAlign: 'center',

@@ -20,10 +20,10 @@ export default function HelpCenter() {
         <title>Help Center - Mixcloud Live - GRT0FF</title>
         <meta name="description" content="Get help with streaming on Mixcloud Live" />
       </Head>
-      <main style={styles.main}>
+      <div style={styles.main}>
         <div style={styles.container}>
           <div style={styles.breadcrumb}>
-            <Link href="/" style={styles.breadcrumbLink}>GRT0FF</Link>
+            <Link href="/" style={styles.breadcrumbLink}>NRSgirls</Link>
             <span style={styles.breadcrumbSeparator}>/</span>
             <Link href="/help" style={styles.breadcrumbLink}>Help Center</Link>
             <span style={styles.breadcrumbSeparator}>/</span>
@@ -68,16 +68,14 @@ export default function HelpCenter() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </>
   );
 }
 
 const styles = {
   main: {
-    minHeight: '100vh',
-    backgroundColor: '#0f0f0f',
-    color: '#ffffff',
+    minHeight: 'calc(100vh - 70px)',
     padding: '2rem',
   },
   container: {

@@ -16,3 +16,54 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Header Navigation */
+header nav a:hover {
+  color: #ffffff !important;
+}
+
+/* Mobile Navigation */
+@media (max-width: 768px) {
+  /* Hide desktop nav, show mobile menu button */
+  header > div > nav:first-of-type {
+    display: none !important;
+  }
+  header > div > button {
+    display: flex !important;
+  }
+  header > nav {
+    display: flex !important;
+  }
+
+  /* Mobile nav link hover */
+  header > nav a:hover {
+    background-color: rgba(0, 112, 243, 0.1) !important;
+    color: #ffffff !important;
+  }
+
+  /* Footer responsive */
+  footer > div > div:first-child {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+  footer > div > div:first-child > div:last-child {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  footer > div > div:first-child > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Footer link hover */
+footer a:hover {
+  color: #ffffff !important;
+}
+
+/* Button hover effects */
+button:hover:not(:disabled),
+a[style*="backgroundColor"]:hover {
+  opacity: 0.9;
+}

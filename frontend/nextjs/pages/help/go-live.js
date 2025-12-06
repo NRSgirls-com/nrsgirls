@@ -30,10 +30,10 @@ export default function GoLive() {
         <title>How do I go live with Mixcloud? - Help Center - GRT0FF</title>
         <meta name="description" content="Learn how to set up and start your first live stream on Mixcloud Live" />
       </Head>
-      <main style={styles.main}>
+      <div style={styles.main}>
         <div style={styles.container}>
           <div style={styles.breadcrumb}>
-            <Link href="/" style={styles.breadcrumbLink}>GRT0FF</Link>
+            <Link href="/" style={styles.breadcrumbLink}>NRSgirls</Link>
             <span style={styles.breadcrumbSeparator}>/</span>
             <Link href="/help" style={styles.breadcrumbLink}>Help Center</Link>
             <span style={styles.breadcrumbSeparator}>/</span>
@@ -355,16 +355,14 @@ export default function GoLive() {
             </aside>
           </div>
         </div>
-      </main>
+      </div>
     </>
   );
 }
 
 const styles = {
   main: {
-    minHeight: '100vh',
-    backgroundColor: '#0f0f0f',
-    color: '#ffffff',
+    minHeight: 'calc(100vh - 70px)',
     padding: '2rem',
   },
   container: {

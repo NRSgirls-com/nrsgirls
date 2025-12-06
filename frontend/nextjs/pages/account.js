@@ -14,11 +14,8 @@ export default function Account() {
       <Head>
         <title>Account - NRSgirls</title>
       </Head>
-      <main style={styles.main}>
+      <div style={styles.main}>
         <div style={styles.container}>
-          <Link href="/" style={styles.backLink}>
-            ← Back to Home
-          </Link>
           <h1 style={styles.title}>My Account</h1>
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Subscription Status</h2>
@@ -58,30 +55,22 @@ export default function Account() {
             real subscription data from the API.
           </p>
         </div>
-      </main>
+      </div>
     </>
   );
 }
 
 const styles = {
   main: {
-    minHeight: '100vh',
+    minHeight: 'calc(100vh - 70px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0f0f0f',
-    color: '#ffffff',
     padding: '2rem',
   },
   container: {
     maxWidth: '600px',
     width: '100%',
-  },
-  backLink: {
-    color: '#0070f3',
-    textDecoration: 'none',
-    display: 'inline-block',
-    marginBottom: '2rem',
   },
   title: {
     fontSize: '2.5rem',
