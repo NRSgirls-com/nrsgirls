@@ -1,0 +1,34 @@
+# Vercel Ignore File
+# Files and directories that should not be included in deployments
+
+# Documentation (not needed for production)
+docs/
+*.md
+!README.md
+
+# Development environment files
+.devcontainer/
+.vscode/
+.github/
+
+# Environment examples (actual .env files are handled by Vercel)
+.env.example
+env/
+
+# Other non-essential files
+dummy_commit.txt
+webhook-server.js
+
+# Git files
+.git/
+.gitignore
+
+# Node modules (Vercel installs fresh)
+node_modules/
+**/node_modules/
+
+# Build artifacts (Vercel builds fresh)
+.next/
+**/.next/
+dist/
+**/dist/

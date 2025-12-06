@@ -497,6 +497,35 @@ psql "postgresql://..." < backup.sql
 
 ### Common Issues
 
+**"Permanent problem cloning the repo" on Vercel**
+
+This error indicates a GitHub-Vercel integration failure, not a code issue. The error typically appears within 1-2 seconds of deployment initiation, suggesting immediate authentication rejection.
+
+**Probable Causes:**
+1. Revoked or expired OAuth token between GitHub and Vercel
+2. Changed repository visibility without corresponding permission update
+3. Organization-level access policy modification
+4. GitHub service disruption (check https://www.githubstatus.com)
+
+**Resolution Steps:**
+1. **Check GitHub Status**: Verify no active incidents at https://www.githubstatus.com
+2. **Verify Connection**: In Vercel project → Settings → Git, check connection status
+3. **Reconnect Integration**:
+   - Navigate to https://vercel.com/[your-project]/settings/git
+   - Disconnect the GitHub repository
+   - Reconnect with fresh authentication
+   - Trigger a new deployment
+4. **If reconnection fails**, perform complete re-authorization:
+   - Go to GitHub → Settings → Applications → Authorized OAuth Apps
+   - Find Vercel and revoke access
+   - Re-authorize Vercel from scratch
+   - Re-import the project
+
+**For Organization Repositories:**
+- Verify organization-level GitHub App installation includes the target repository
+- Confirm no organization policies block third-party integrations
+- Ensure you have admin permissions for the repository
+
 **Frontend not loading**
 - Check Vercel deployment logs
 - Verify environment variables are set
