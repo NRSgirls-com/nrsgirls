@@ -75,6 +75,64 @@ Before deploying, ensure you have:
 - [ ] Custom domain configured (if applicable)
 - [ ] SSL certificate active (automatic with Vercel)
 
+### On-Demand Concurrent Builds
+
+On-Demand Concurrent Builds provides dynamic scaling of builds, allowing projects to temporarily increase their build capacity when needed. This is useful during:
+- High-frequency deployments (multiple PRs merging simultaneously)
+- Monorepo builds where multiple packages need to build
+- Peak development periods with many team members pushing changes
+
+**How to Enable:**
+- Go to Vercel Dashboard → Settings → Billing → Concurrent Builds
+- Enable On-Demand Concurrent Builds
+- Builds will automatically scale when the queue builds up
+
+### Build Machines
+
+Vercel offers different build machine performance tiers. Choose based on your project's needs:
+
+| Performance | vCPUs | Memory | Cost/min | Best For |
+|-------------|-------|--------|----------|----------|
+| **Standard** | 4 | 8 GB | $0.014 | Lightweight apps, APIs, simple builds |
+| **Enhanced** | 8 | 16 GB | $0.03 | Large applications, complex builds |
+| **Turbo** | 30 | 60 GB | $0.126 | Turbopack builds, multi-core optimization |
+
+**Recommended Configuration for NRSgirls:**
+
+For the `nrsgirls` project, **Standard** performance is recommended for most development:
+- The Next.js frontend is relatively lightweight
+- Build times are acceptable with 4 vCPUs
+- Cost-effective for frequent deployments
+
+Consider **Enhanced** performance when:
+- Build times exceed 5+ minutes consistently
+- Adding more packages to the monorepo
+- Running intensive TypeScript compilation or large test suites
+
+Consider **Turbo** performance when:
+- Migrating to Turbopack (Next.js 14+)
+- Build times are a bottleneck for team productivity
+- Running parallel builds across many packages
+
+**How to Configure Build Machine:**
+1. Go to Vercel Dashboard → Project Settings → General
+2. Scroll to "Build & Development Settings"
+3. Under "Build Machine", select the desired performance tier
+4. Or configure per-project in the team settings
+
+**Per-Project Configuration:**
+You can set different build machines for different projects:
+- `nrsgirls` (main frontend): Standard
+- `nrsgirls-platform` (full platform): Enhanced
+- Production builds: Consider Enhanced for reliability
+
+### Build Machine Checklist
+- [ ] Evaluated build time requirements
+- [ ] Selected appropriate build machine tier
+- [ ] Configured per-project if needed
+- [ ] Monitored build costs in Vercel dashboard
+- [ ] Enabled On-Demand Concurrent Builds (if needed)
+
 ## 2. API/Backend Deployment (Render)
 
 ### Why Render?
