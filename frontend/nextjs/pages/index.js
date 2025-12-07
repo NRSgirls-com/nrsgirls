@@ -25,6 +25,9 @@ export default function Home() {
             <Link href="/help" style={styles.buttonSecondary}>
               Help Center
             </Link>
+            <Link href="/music0flaw" style={styles.buttonSecondary}>
+              DJ Rights Initiative
+            </Link>
           </div>
         </div>
       </main>
