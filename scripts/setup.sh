@@ -30,5 +30,4 @@ install_if_pkg() {
 }
 # Install frontend/nextjs
 install_if_pkg frontend/nextjs
-echo "Setup complete. Edit .env and run the services you need.
-"
+echo "Setup complete. Edit .env and run the services you need."

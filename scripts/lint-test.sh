@@ -24,5 +24,4 @@ if [ -d "$ROOT/backend" ] && [ -f "$ROOT/backend/package.json" ]; then
   fi
 fi
 
-echo "Lint/test tasks executed (best-effort).
-"
+echo "Lint/test tasks executed (best-effort)."
