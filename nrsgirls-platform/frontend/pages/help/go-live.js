@@ -328,7 +328,7 @@ export default function GoLive() {
                 </div>
                 {helpful !== null && (
                   <p style={styles.feedbackThanks}>
-                    {helpful ? 'Great! Thanks for your feedback.' : 'We\'re sorry to hear that. Please contact support for more help.'}
+                    {helpful ? 'Great! Thanks for your feedback.' : 'We&apos;re sorry to hear that. Please contact support for more help.'}
                   </p>
                 )}
                 <p style={styles.helpfulCount}>4368 out of 4897 found this helpful</p>
