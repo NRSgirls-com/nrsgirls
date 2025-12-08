@@ -2,6 +2,10 @@
 function generateSiteMap() {
   const baseUrl = 'https://nrsgirls.com';
   
+  // Last significant update date for the website
+  // Update this date when you make significant changes to the content
+  const lastModified = new Date('2025-12-08').toISOString();
+  
   // List of all pages/routes in the application
   const routes = [
     '', // Home page
@@ -17,7 +21,7 @@ ${routes
   .map((route) => {
     return `  <url>
     <loc>${baseUrl}${route}</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
+    <lastmod>${lastModified}</lastmod>
     <changefreq>${route === '' ? 'daily' : 'weekly'}</changefreq>
     <priority>${route === '' ? '1.0' : '0.8'}</priority>
   </url>`;
@@ -29,7 +33,8 @@ ${routes
 }
 
 function SiteMap() {
-  // getServerSideProps will do the heavy lifting
+  // This component doesn't render anything as the sitemap is generated server-side
+  return null;
 }
 
 export async function getServerSideProps({ res }) {
