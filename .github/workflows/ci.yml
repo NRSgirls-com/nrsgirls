@@ -29,8 +29,8 @@ jobs:
 
       - name: Run setup script
         run: |
-          if [ -f "nrsgirls-platform/scripts/setup.sh" ]; then
-            bash nrsgirls-platform/scripts/setup.sh
+          if [ -f "scripts/setup.sh" ]; then
+            bash scripts/setup.sh
           fi
 
       - name: Install frontend dependencies
@@ -42,8 +42,8 @@ jobs:
 
       - name: Lint and test frontend
         run: |
-          if [ -f "nrsgirls-platform/scripts/lint-test.sh" ]; then
-            bash nrsgirls-platform/scripts/lint-test.sh
+          if [ -f "scripts/lint-test.sh" ]; then
+            bash scripts/lint-test.sh
           fi
 
       - name: Build frontend
