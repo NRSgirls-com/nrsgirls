@@ -38,7 +38,7 @@ Before deploying, ensure you have:
    - Click "New Project"
    - Select the `nrsgirls` repository
    - Configure project:
-     - **Root Directory**: `frontend/nextjs`
+     - **Root Directory**: `nrsgirls-platform/frontend`
      - **Framework Preset**: Next.js
      - **Build Command**: `npm run build`
      - **Output Directory**: `.next`
@@ -69,7 +69,7 @@ Before deploying, ensure you have:
 
 ### Vercel Deployment Checklist
 - [ ] Project imported and connected to GitHub
-- [ ] Root directory set to `frontend/nextjs`
+- [ ] Root directory set to `nrsgirls-platform/frontend`
 - [ ] Environment variables configured
 - [ ] First deployment successful
 - [ ] Custom domain configured (if applicable)
