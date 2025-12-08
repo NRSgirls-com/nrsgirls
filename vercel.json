@@ -1,8 +1,8 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "cd frontend/nextjs && yarn install && yarn build",
-  "outputDirectory": "frontend/nextjs/.next",
-  "installCommand": "cd frontend/nextjs && yarn install",
-  "devCommand": "cd frontend/nextjs && yarn dev"
+  "buildCommand": "cd nrsgirls-platform/frontend && yarn install && yarn build",
+  "outputDirectory": "nrsgirls-platform/frontend/.next",
+  "installCommand": "cd nrsgirls-platform/frontend && yarn install",
+  "devCommand": "cd nrsgirls-platform/frontend && yarn dev"
 }

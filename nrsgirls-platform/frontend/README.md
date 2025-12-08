@@ -1,12 +1,33 @@
-# NRSgirls Frontend - Next.js
+# NRSgirls Platform - Frontend
 
-A minimal Next.js application demonstrating the gated premium content flow with Stripe Checkout integration.
+A Next.js application for the NRSgirls platform connecting DJs and performers with privacy-first features and Stripe integration.
+
+## Project Structure
+
+```
+frontend/
+├── pages/              # Next.js pages and routes
+│   ├── index.js       # Landing page / Homepage
+│   ├── pricing.js     # Pricing and subscription plans
+│   ├── account.js     # User account management
+│   ├── help/          # Help center pages
+│   └── api/           # API routes
+│       ├── checkout.js # Stripe Checkout sessions
+│       └── webhook.js  # Stripe webhook handler
+├── styles/            # Global CSS styles
+├── public/            # Static assets
+├── homepage/          # Homepage component documentation
+├── dj-portal/         # DJ portal documentation (to be implemented)
+├── performer-portal/  # Performer portal documentation (to be implemented)
+└── shared-components/ # Shared React components
+```
 
 ## Features
 
-- **Landing Page** (`/`): Simple homepage with navigation to Pricing and Account
+- **Landing Page** (`/`): Homepage with navigation to Pricing, Account, and Help
 - **Pricing Page** (`/pricing`): Display subscription plans with Stripe Checkout integration
-- **Account Page** (`/account`): Shows subscription status (placeholder)
+- **Account Page** (`/account`): Shows subscription status (placeholder for full implementation)
+- **Help Center** (`/help`): Documentation and help resources
 - **API Routes**:
   - `/api/checkout`: Creates Stripe Checkout sessions
   - `/api/webhook`: Handles Stripe webhook events
@@ -21,19 +42,24 @@ A minimal Next.js application demonstrating the gated premium content flow with 
 
 ### Installation
 
-1. Install dependencies:
+1. Navigate to the frontend directory:
+```bash
+cd nrsgirls-platform/frontend
+```
+
+2. Install dependencies:
 ```bash
 npm install
 # or
 yarn install
 ```
 
-2. Set up environment variables:
+3. Set up environment variables:
 ```bash
 cp .env.example .env.local
 ```
 
-3. Edit `.env.local` and add your Stripe keys:
+4. Edit `.env.local` and add your Stripe keys:
 ```env
 STRIPE_SECRET_KEY=sk_test_your_key_here
 STRIPE_WEBHOOK_SECRET=whsec_your_secret_here
@@ -81,7 +107,7 @@ npm start
 
 1. Push your code to GitHub
 2. Import the project in Vercel
-3. Set the root directory to `frontend/nextjs`
+3. Set the root directory to `nrsgirls-platform/frontend`
 4. Add environment variables in Vercel dashboard:
    - `STRIPE_SECRET_KEY`
    - `STRIPE_WEBHOOK_SECRET`
@@ -89,13 +115,7 @@ npm start
    - URL: `https://your-app.vercel.app/api/webhook`
    - Events: `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_*`
 
-### Render
-
-1. Create a new Web Service
-2. Build command: `npm install && npm run build`
-3. Start command: `npm start`
-4. Add environment variables in Render dashboard
-5. Configure Stripe webhooks to point to your Render URL
+See [/docs/DEPLOYMENT.md](../../docs/DEPLOYMENT.md) for complete deployment instructions.
 
 ## Testing with Stripe
 
@@ -115,24 +135,19 @@ stripe listen --forward-to localhost:3000/api/webhook
 stripe trigger checkout.session.completed
 ```
 
-## Project Structure
+## Component Organization
 
-```
-frontend/nextjs/
-├── pages/
-│   ├── index.js          # Landing page
-│   ├── pricing.js        # Pricing page with checkout
-│   ├── account.js        # Account/subscription status
-│   ├── _app.js           # Next.js app wrapper
-│   └── api/
-│       ├── checkout.js   # Stripe Checkout API
-│       └── webhook.js    # Stripe webhook handler
-├── styles/
-│   └── globals.css       # Global styles
-├── package.json
-├── .env.example          # Example environment variables
-└── README.md
-```
+### Homepage
+The homepage component provides the main landing page with split call-to-action for DJs and performers. See `homepage/README.md` for details.
+
+### DJ Portal (Planned)
+DJ enrollment, upload widgets, and dashboard. See `dj-portal/README.md` for implementation notes.
+
+### Performer Portal (Planned)
+Performer profiles and privacy controls. See `performer-portal/README.md` for implementation notes.
+
+### Shared Components
+Reusable UI components shared across all portals. See `shared-components/README.md` for available components.
 
 ## Security Notes
 
@@ -147,8 +162,10 @@ frontend/nextjs/
 2. Add database integration to store subscription data
 3. Implement user authentication (Auth0, NextAuth.js, etc.)
 4. Add session management and protected routes
-5. Implement complete subscription management UI
-6. Add error logging and monitoring (Sentry, LogRocket, etc.)
+5. Implement DJ portal pages
+6. Implement Performer portal pages
+7. Build shared component library
+8. Add error logging and monitoring (Sentry, LogRocket, etc.)
 
 ## Support
 
@@ -156,3 +173,4 @@ For issues or questions:
 - Check the [Next.js Documentation](https://nextjs.org/docs)
 - Review [Stripe API Documentation](https://stripe.com/docs/api)
 - See [Stripe Webhooks Guide](https://stripe.com/docs/webhooks)
+- Review platform documentation in `/docs`

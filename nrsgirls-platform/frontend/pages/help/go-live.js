@@ -66,10 +66,10 @@ export default function GoLive() {
               <section id="equipment" style={styles.section}>
                 <h2 style={styles.sectionTitle}>Equipment</h2>
                 <p style={styles.paragraph}>
-                  Before you start your first Live broadcast on Mixcloud, you'll need to set up your hardware and software to allow you to stream.
+                  Before you start your first Live broadcast on Mixcloud, you&apos;ll need to set up your hardware and software to allow you to stream.
                 </p>
 
-                <h3 style={styles.subheading}>You'll need:</h3>
+                <h3 style={styles.subheading}>You&apos;ll need:</h3>
                 <ul style={styles.list}>
                   <li style={styles.listItem}>
                     <strong>A subscription to Mixcloud Pro</strong>
@@ -88,7 +88,7 @@ export default function GoLive() {
                     <strong>Streaming software compatible with RTMP streaming</strong>
                     <ul style={styles.nestedList}>
                       <li style={styles.nestedListItem}>
-                        We recommend <strong>OBS</strong> because it's free and easy to set up.
+                        We recommend <strong>OBS</strong> because it&apos;s free and easy to set up.
                       </li>
                       <li style={styles.nestedListItem}>
                         Check out our blog post with all the information you need to get broadcasting with OBS here:{' '}
@@ -113,7 +113,7 @@ export default function GoLive() {
                         Depending on your setup, you may benefit from including extra gear, such as headphones, microphones, a mixer, or an audio interface or soundcard
                       </li>
                       <li style={styles.nestedListItem}>
-                        For advice on different setups based on the content you're live-streaming, check out the Creator Resources on our blog
+                        For advice on different setups based on the content you&apos;re live-streaming, check out the Creator Resources on our blog
                       </li>
                     </ul>
                   </li>
@@ -155,11 +155,11 @@ export default function GoLive() {
                 </div>
 
                 <p style={styles.paragraph}>
-                  If you're using OBS, you can find more information in our{' '}
+                  If you&apos;re using OBS, you can find more information in our{' '}
                   <Link href="/help/go-live-obs" style={styles.inlineLink}>set-up guide here</Link>.
                 </p>
                 <p style={styles.paragraph}>
-                  If you're using other streaming software, we recommend checking out the developer's resources for set-up advice.
+                  If you&apos;re using other streaming software, we recommend checking out the developer&apos;s resources for set-up advice.
                 </p>
               </section>
 
@@ -196,13 +196,13 @@ export default function GoLive() {
                     </div>
                     <div style={styles.infoBox}>
                       <p style={styles.infoText}>
-                        Your stream will be named "[Your username] live!" by default or if you don't enter a name in this field. You can set up a custom name to personalize your stream.
+                        Your stream will be named &quot;[Your username] live!&quot; by default or if you don&apos;t enter a name in this field. You can set up a custom name to personalize your stream.
                       </p>
                       <p style={styles.infoText}>
-                        Once you've set up your stream information for the first time, it will be stored as the new default for your future streams.
+                        Once you&apos;ve set up your stream information for the first time, it will be stored as the new default for your future streams.
                       </p>
                       <p style={styles.infoTextWarning}>
-                        <strong>Please note:</strong> You cannot change the name, description or tags once you've gone live. If you'd like to change any of the information after you've started streaming, please stop your stream temporarily.
+                        <strong>Please note:</strong> You cannot change the name, description or tags once you&apos;ve gone live. If you&apos;d like to change any of the information after you&apos;ve started streaming, please stop your stream temporarily.
                       </p>
                     </div>
                   </div>
@@ -252,7 +252,7 @@ export default function GoLive() {
                   <div style={styles.stepContent}>
                     <h4 style={styles.stepTitle}>Start streaming via your chosen software</h4>
                     <p style={styles.stepText}>
-                      Your stream will connect and you'll see it on your Mixcloud Live page.
+                      Your stream will connect and you&apos;ll see it on your Mixcloud Live page.
                     </p>
                   </div>
                 </div>
@@ -262,10 +262,10 @@ export default function GoLive() {
                   <div style={styles.stepContent}>
                     <h4 style={styles.stepTitle}>Share your stream</h4>
                     <p style={styles.stepText}>
-                      Let your fans know you're going live so they can tune in! Click the Share Show button and copy the link to your live-stream so you can post it on social media.
+                      Let your fans know you&apos;re going live so they can tune in! Click the Share Show button and copy the link to your live-stream so you can post it on social media.
                     </p>
                     <div style={styles.tipBox}>
-                      <strong>Tip:</strong> The URL of your stream will always be <code style={styles.code}>mixcloud.com/live/[your username]</code>, so it's easy to remember and share in advance and in your social media bios.
+                      <strong>Tip:</strong> The URL of your stream will always be <code style={styles.code}>mixcloud.com/live/[your username]</code>, so it&apos;s easy to remember and share in advance and in your social media bios.
                     </div>
                   </div>
                 </div>
