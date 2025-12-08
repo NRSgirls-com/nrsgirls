@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-BACKUP_DIR="nrsgirls-platform/backups"
+BACKUP_DIR="backups"
 mkdir -p "$BACKUP_DIR"
 TS=""$(date -u +"%Y%m%dT%H%M%SZ")""
 OUT="$BACKUP_DIR/nrsgirls-db-$TS.sql.gz"
