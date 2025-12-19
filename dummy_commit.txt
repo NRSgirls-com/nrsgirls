@@ -1,3 +1,0 @@
-# Dummy commit to trigger redeployment
-
-This commit is intended to trigger a redeployment on Vercel.
