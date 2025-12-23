@@ -1,21 +1,23 @@
-NRS Girls Platform
+# NRS Girls Platform (Deprecated)
 
-Overview
+## Notice
 
-This directory contains the initial scaffold for the nrsgirls-platform project: a modern web platform connecting DJs and performers while preserving performer privacy and legal safety. It includes drafted documentation, frontend and backend stubs, deployment manifests, scripts, and placeholder brand assets so contributors can iterate quickly.
+This directory has been consolidated into the repository root structure for better organization.
 
-Structure
+## New Locations
 
-- docs/: Vision, team, technical specification, legal memo, and business plan.
-- frontend/: Homepage, DJ and performer portals, and shared components.
-- backend/: API endpoints, database schema, security scanning, and streaming integration notes.
-- brand-assets/: Placeholder directories for logos and color schemes with a style guide.
-- deployment/: Docker and hosting configuration and infrastructure notes.
-- scripts/: Setup and deployment automation.
+The content from this directory has been moved to:
 
-Tone: Professional — content is drafted to reflect the NRS Group of Fresno's formal, community-focused voice.
+- **Documentation**: `/docs/platform/` - Vision, team, technical specification, legal memo, and business plan
+- **Frontend Plans**: `/docs/platform/FRONTEND_PLANS.md` - Homepage, DJ and performer portals, and shared components plans
+- **Backend**: `/backend/` - API endpoints, database schema, security scanning, and streaming integration notes
+- **Brand Assets**: `/brand-assets/` - Placeholder directories for logos and color schemes with a style guide
+- **Deployment**: `/deployment/` - Docker and hosting configuration and infrastructure notes
+- **Scripts**: `/scripts/` - Setup and deployment automation
 
-Notes
+## Working Frontend
 
-- This scaffold uses placeholders for binary assets; add real images and logos into brand-assets/logos/.
-- No secrets are included. See .env.example for required environment variables.
+The actual working Next.js frontend application is located at:
+- `/frontend/nextjs/` - Next.js application with Stripe integration
+
+Please update any references to the old `nrsgirls-platform/` directory structure to use the new consolidated locations.
