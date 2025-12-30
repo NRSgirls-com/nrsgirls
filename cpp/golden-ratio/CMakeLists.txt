@@ -28,14 +28,19 @@ target_include_directories(golden_ratio INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 
-# Main executable
+# Main executable - Golden Ratio Containers
 add_executable(golden_demo src/main.cpp)
 target_link_libraries(golden_demo PRIVATE golden_ratio)
+
+# Classifier demo - Content Classification & Routing
+add_executable(classifier_demo src/classifier_demo.cpp)
+target_link_libraries(classifier_demo PRIVATE golden_ratio)
 
 # Optional: Enable threading for observer mutex
 find_package(Threads)
 if(Threads_FOUND)
     target_link_libraries(golden_demo PRIVATE Threads::Threads)
+    target_link_libraries(classifier_demo PRIVATE Threads::Threads)
 endif()
 
 # Installation rules
