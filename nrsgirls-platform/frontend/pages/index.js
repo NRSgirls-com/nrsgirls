@@ -15,6 +15,12 @@ export default function Home() {
           <p style={styles.description}>
             Premium DJ content and performer platform with privacy-first features
           </p>
+          <div style={styles.showcase}>
+            <h2 style={styles.showcaseTitle}>Listen, watch, and book with NRSgirls</h2>
+            <p style={styles.showcaseCopy}>
+              Catch business updates, new mixes, and live sets in one place.
+            </p>
+          </div>
           <div style={styles.buttonContainer}>
             <Link href="/pricing" style={styles.button}>
               View Pricing
@@ -24,6 +30,9 @@ export default function Home() {
             </Link>
             <Link href="/help" style={styles.buttonSecondary}>
               Help Center
+            </Link>
+            <Link href="/updates" style={styles.buttonAccent}>
+              Updates, Mixes &amp; Videos
             </Link>
           </div>
         </div>
@@ -54,6 +63,18 @@ const styles = {
     marginBottom: '2rem',
     color: '#cccccc',
   },
+  showcase: {
+    marginBottom: '2rem',
+  },
+  showcaseTitle: {
+    fontSize: '1.5rem',
+    marginBottom: '0.5rem',
+  },
+  showcaseCopy: {
+    fontSize: '1rem',
+    color: '#b3b3b3',
+    margin: 0,
+  },
   buttonContainer: {
     display: 'flex',
     gap: '1rem',
@@ -73,6 +94,16 @@ const styles = {
   buttonSecondary: {
     padding: '1rem 2rem',
     backgroundColor: '#333333',
+    color: '#ffffff',
+    textDecoration: 'none',
+    borderRadius: '0.5rem',
+    fontSize: '1rem',
+    fontWeight: 'bold',
+    transition: 'background-color 0.2s',
+  },
+  buttonAccent: {
+    padding: '1rem 2rem',
+    backgroundColor: '#ec4899',
     color: '#ffffff',
     textDecoration: 'none',
     borderRadius: '0.5rem',
