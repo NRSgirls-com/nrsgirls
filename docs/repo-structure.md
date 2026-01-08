@@ -4,8 +4,13 @@ This repo contains a few top-level workspaces and reference documents. Use this 
 
 ## Top-level map
 
-- `docs/`: Primary documentation hub, including onboarding plans, best practices, and checklists.
+- `docs/`: Primary documentation hub for onboarding and operational guidance.
+  - `docs/onboarding/`: Month-by-month onboarding plans.
+  - `docs/best-practices/`: Engineering best practices and standards.
+  - `docs/checklists/`: PR, security, and release checklists.
+  - `docs/DEPLOYMENT.md`: High-level deployment notes.
 - `frontend/`: Early Next.js prototype work (currently a `nextjs/` starter).
+  - `frontend/nextjs/`: Experimental UI prototype.
 - `nrsgirls-platform/`: The main platform scaffold with backend, frontend, docs, and deployment assets.
 - `env/`: Environment configuration and local setup helpers.
 - `webhook-server.js`: Lightweight webhook listener used during development.
