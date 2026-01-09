@@ -130,28 +130,25 @@ In VS Code settings:
 {
   "github.copilot.enable": {
     "*": true,
-    "**/.env*": false,
-    "**/secrets/**": false,
-    "**/*secret*": false,
-    "**/*credential*": false,
-    "**/config/production*": false
+    "plaintext": false,
+    "dotenv": false,
+    "scminput": false
   }
 }
 ```
 
-### Repository-Level Settings
+`github.copilot.enable` only accepts language identifiers (not path globs), so disable
+Copilot for languages that commonly contain secrets, such as `plaintext` and `dotenv`.
+If a file still gets a different language mode, update the file's language in VS Code
+or add a `.vscode/settings.json` that forces the right language mode for those files.
 
-Create `.github/copilot-blocked-paths.yml`:
+### Repository-Level Controls
 
-```yaml
-# Files Copilot should not access
-blocked:
-  - ".env*"
-  - "secrets/"
-  - "**/credentials/**"
-  - "**/*.pem"
-  - "**/*.key"
-```
+Use organization or enterprise Copilot policies to disable Copilot for specific
+repositories that store secrets or production credentials. For local control, combine
+language-based Copilot disabling with file access policies (for example, keep secret
+files out of the workspace or use OS-level permissions) so sensitive files are not
+opened in editors with Copilot enabled.
 
 ## Organizational Policies
 
