@@ -166,10 +166,10 @@ flyctl deploy
 3. **Run Migrations**
    ```bash
    # Using psql
-   psql "postgresql://..." -f nrsgirls-platform/backend/database/schema.sql
+   psql "postgresql://..." -f backend/database/schema.sql
    
    # Or using migration script
-   bash nrsgirls-platform/scripts/migrate.sh
+   bash scripts/migrate.sh
    ```
 
 4. **Configure Row Level Security**

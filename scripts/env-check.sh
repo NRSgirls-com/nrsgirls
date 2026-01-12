@@ -8,7 +8,7 @@ if [ -f .env ]; then
   set -a; source .env; set +a
 fi
 for v in "${REQUIRED[@]}"; do
-  if [ -z ""${!v:-}" ]; then
+  if [ -z "${!v:-}" ]; then
     MISSING+=("$v")
   fi
 done
@@ -16,5 +16,4 @@ if [ ${#MISSING[@]} -gt 0 ]; then
   echo "Missing required environment variables: ${MISSING[*]}"
   exit 1
 fi
-echo "All required environment variables present.
-"
+echo "All required environment variables present."

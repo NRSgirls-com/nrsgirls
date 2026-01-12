@@ -26,5 +26,4 @@ if [ -n ""${HEALTH_URL:-}" ]; then
     echo "curl not found; skipping HTTP check"
   fi
 fi
-echo "Healthcheck done.
-"
+echo "Healthcheck done."

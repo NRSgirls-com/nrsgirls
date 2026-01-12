@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 MODE=""${1:-dev}"" # dev or prod
-COMPOSE_FILE="nrsgirls-platform/deployment/docker-compose.yml"
+COMPOSE_FILE="deployment/docker-compose.yml"
 echo "== deploy.sh (mode=$MODE) =="
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is required. Install Docker and retry."
