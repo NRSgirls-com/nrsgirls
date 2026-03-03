@@ -20,7 +20,7 @@ jobs:
           node-version: '18'
           cache: 'yarn'
           cache-dependency-path: |
-            frontend/nextjs/yarn.lock
+            nrsgirls-platform/frontend/yarn.lock
 
       - name: Enable Corepack
         run: |
@@ -35,8 +35,8 @@ jobs:
 
       - name: Install frontend dependencies
         run: |
-          if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
-            cd frontend/nextjs
+          if [ -d "nrsgirls-platform/frontend" ] && [ -f "nrsgirls-platform/frontend/package.json" ]; then
+            cd nrsgirls-platform/frontend
             yarn install --frozen-lockfile
           fi
 
@@ -48,7 +48,7 @@ jobs:
 
       - name: Build frontend
         run: |
-          if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
-            cd frontend/nextjs
+          if [ -d "nrsgirls-platform/frontend" ] && [ -f "nrsgirls-platform/frontend/package.json" ]; then
+            cd nrsgirls-platform/frontend
             yarn build
           fi
