@@ -24,7 +24,7 @@
     {
       "label": "Frontend: Dev Server",
       "type": "shell",
-      "command": "cd frontend/nextjs && npm run dev",
+      "command": "cd nrsgirls-platform/frontend && yarn dev",
       "problemMatcher": [],
       "isBackground": true
     },

@@ -8,6 +8,7 @@
 - Branch: `feat/<area>`, `fix/<area>`, `docs/<area>`
 - Conventional commits; rebase small PRs
 - PR template: summary, screenshots, test notes
+- See [Git Configuration Guide](git-configuration.md) for recommended settings
 
 ## TypeScript
 - `"strict": true`

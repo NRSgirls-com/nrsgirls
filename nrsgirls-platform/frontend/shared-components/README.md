@@ -1,5 +1,14 @@
-Shared UI Components
+# Shared UI Components
 
-Reusable elements: Header, Footer, ConsentModal, PrivacySettings, FileUploader, AnalyticsCard.
+Reusable React components shared across all portals.
 
-TODO: Implement components in the chosen framework (React/Vue/Next.js) and expose design tokens from brand-assets/style-guide.md.
+## Planned Components
+
+- `Header` — site-wide navigation
+- `Footer` — site-wide footer
+- `ConsentModal` — privacy consent dialog
+- `PrivacySettings` — user privacy controls
+- `FileUploader` — media upload widget
+- `AnalyticsCard` — dashboard analytics display
+
+> **Status:** Planned. Implement in React/Next.js and expose design tokens from [`brand-assets/style-guide.md`](../../brand-assets/style-guide.md).

@@ -1,8 +1,11 @@
-Logos — placeholders
+# Logos
 
-Drop official PNG/SVG logos into this directory. Filenames to use when adding assets:
-- logo-primary.png
-- logo-primary.svg
-- logo-mark.png
+Drop official PNG/SVG logos into this directory.
 
-Do not commit sensitive or proprietary files without authorization.
+## Expected Filenames
+
+- `logo-primary.png`
+- `logo-primary.svg`
+- `logo-mark.png`
+
+> **Status:** Placeholder. Do not commit sensitive or proprietary files without authorization.

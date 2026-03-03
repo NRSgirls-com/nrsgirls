@@ -16,25 +16,26 @@ NRSgirls is a DJ and performer streaming platform with privacy-first features. T
 
 ```
 nrsgirls/
-├── frontend/nextjs/          # Main Next.js frontend application
-│   ├── pages/                # Next.js pages (index, pricing, account, API routes)
-│   ├── styles/               # Global CSS styles
-│   └── .env.example          # Frontend environment template
 ├── nrsgirls-platform/        # Platform scaffolding and documentation
 │   ├── docs/                 # Vision, technical specs, legal, business plan
-│   ├── frontend/             # Additional frontend portals (DJ, performer, homepage)
-│   │   └── shared-components/# Shared React UI components (@nrsgirls/shared-components)
+│   ├── frontend/             # Next.js frontend application
+│   │   ├── pages/            # Next.js pages (index, pricing, account, API routes)
+│   │   ├── styles/           # Global CSS styles
+│   │   ├── shared-components/# Shared React UI components (@nrsgirls/shared-components)
+│   │   └── .env.example      # Frontend environment template
 │   ├── backend/              # API, database, security, streaming stubs
 │   ├── brand-assets/         # Logos, color schemes, style guide
 │   ├── deployment/           # Docker and infrastructure configs
 │   └── scripts/              # Setup, deployment, and utility scripts
 ├── docs/                     # Developer documentation
 │   ├── onboarding/           # Month-by-month onboarding guides
-│   ├── best-practices/       # Coding standards and conventions
+│   ├── best-practices/       # Coding standards, Git configuration
 │   ├── checklists/           # PR review, security, release checklists
 │   └── tech-updates/         # Framework upgrade notes (e.g., Next.js 16)
 ├── env/                      # Environment-specific configs (dev, staging, prod)
 ├── .github/workflows/        # CI/CD pipelines
+├── .gitattributes            # Line ending and diff settings
+├── .editorconfig             # Editor consistency settings
 └── vercel.json               # Vercel deployment configuration
 ```
 
@@ -68,7 +69,7 @@ cd nrsgirls
 bash nrsgirls-platform/scripts/setup.sh
 
 # Install frontend dependencies
-cd frontend/nextjs
+cd nrsgirls-platform/frontend
 yarn install
 
 # Copy environment file and configure
@@ -90,7 +91,7 @@ S3_ACCESS_KEY=replace-me
 S3_SECRET_KEY=replace-me
 ```
 
-**Frontend** (`frontend/nextjs/.env.local`):
+**Frontend** (`nrsgirls-platform/frontend/.env.local`):
 ```
 STRIPE_SECRET_KEY=sk_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
@@ -98,7 +99,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 
 ## Key Commands
 
-### Frontend (from `frontend/nextjs/`)
+### Frontend (from `nrsgirls-platform/frontend/`)
 ```bash
 yarn dev          # Start development server
 yarn build        # Production build
@@ -131,6 +132,11 @@ docker-compose down     # Stop all services
 - Use conventional commits
 - Keep PRs small and focused
 
+### Git Configuration
+- See `docs/best-practices/git-configuration.md` for recommended Git settings
+- `.gitattributes` enforces LF line endings across platforms
+- `.editorconfig` ensures consistent editor behavior
+
 ### TypeScript
 - Enable `"strict": true` in tsconfig
 - Never use `any` in application code
@@ -159,7 +165,7 @@ docker-compose down     # Stop all services
 Testing is still being set up. When available:
 
 ```bash
-# Run from frontend/nextjs
+# Run from nrsgirls-platform/frontend
 yarn test
 
 # Or use the lint-test script
@@ -183,7 +189,7 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) runs on all pushes:
 
 ### Vercel (Frontend)
 - Auto-deploys from main branch
-- Root directory: `frontend/nextjs`
+- Root directory: `nrsgirls-platform/frontend`
 - Build command: `yarn install && yarn build`
 - Configure environment variables in Vercel dashboard
 
@@ -198,11 +204,14 @@ See `docs/DEPLOYMENT.md` for detailed deployment instructions.
 
 | File | Purpose |
 |------|---------|
-| `vercel.json` | Vercel deployment config (root: `frontend/nextjs`) |
+| `vercel.json` | Vercel deployment config (root: `nrsgirls-platform/frontend`) |
 | `.github/workflows/ci.yml` | CI pipeline definition |
-| `frontend/nextjs/pages/api/webhook.js` | Stripe webhook handler |
-| `frontend/nextjs/pages/api/checkout.js` | Stripe checkout API |
+| `.gitattributes` | Line ending normalization rules |
+| `.editorconfig` | Cross-editor consistency settings |
+| `nrsgirls-platform/frontend/pages/api/webhook.js` | Stripe webhook handler |
+| `nrsgirls-platform/frontend/pages/api/checkout.js` | Stripe checkout API |
 | `docs/best-practices/README.md` | Coding standards |
+| `docs/best-practices/git-configuration.md` | Git configuration guide |
 | `docs/checklists/pr-review.md` | PR review checklist |
 | `docs/checklists/security.md` | Security checklist |
 

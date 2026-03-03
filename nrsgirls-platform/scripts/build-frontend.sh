@@ -2,12 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-# Try root-level frontend/nextjs first
-FRONTEND_DIR="$ROOT/frontend/nextjs"
-if [ ! -d "$FRONTEND_DIR" ]; then
-  # Fall back to platform frontend
-  FRONTEND_DIR="$ROOT/nrsgirls-platform/frontend"
-fi
+FRONTEND_DIR="$ROOT/nrsgirls-platform/frontend"
 
 if [ ! -d "$FRONTEND_DIR" ]; then
   echo "Frontend directory not found"
@@ -15,7 +10,7 @@ if [ ! -d "$FRONTEND_DIR" ]; then
 fi
 
 cd "$FRONTEND_DIR"
-if [ -f package.json ] && grep -q ""build"" package.json; then
+if [ -f package.json ] && grep -q '"build"' package.json; then
   if command -v yarn >/dev/null 2>&1; then
     yarn build
   else
