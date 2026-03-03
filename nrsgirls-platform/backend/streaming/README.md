@@ -1,6 +1,7 @@
-Streaming Integration
+# Streaming Integration
 
-Guidance for streaming:
+Guidance for streaming infrastructure.
+
 - Use object storage + CDN for public assets
 - Provide signed expiring URLs for private/controlled streams
 - Support HLS for adaptive streaming

@@ -1,7 +1,12 @@
-Color Schemes — placeholders
+# Color Schemes
 
-Provide JSON or CSS variables describing brand colors. Example tokens:
-- --nrs-primary: #123456
-- --nrs-accent: #abcdef
+Provide JSON or CSS variables describing brand colors.
 
-Replace with approved palette.
+## Example Tokens
+
+```css
+--nrs-primary: #123456;
+--nrs-accent: #abcdef;
+```
+
+> **Status:** Placeholder. Replace with approved palette.

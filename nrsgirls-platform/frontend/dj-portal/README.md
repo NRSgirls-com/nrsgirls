@@ -1,8 +1,11 @@
-DJ Portal
+# DJ Portal
 
-Contains DJ enrollment flow, upload widgets, and dashboard implementation notes. Key components:
-- Signup / onboarding
-- Upload form with metadata and rights-check checklist
-- Dashboard: upload history, analytics, monetization settings
+DJ enrollment flow, upload widgets, and dashboard.
 
-TODO: Implement frontend pages and wire to backend API.
+## Key Components
+
+- **Signup / onboarding** — DJ registration and profile setup
+- **Upload form** — metadata entry and rights-check checklist
+- **Dashboard** — upload history, analytics, monetization settings
+
+> **Status:** Planned. Implement frontend pages and wire to backend API.
