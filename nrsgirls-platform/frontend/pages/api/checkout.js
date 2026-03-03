@@ -9,7 +9,7 @@ import Stripe from 'stripe';
  * - STRIPE_SECRET_KEY: Your Stripe secret key (starts with sk_test_ or sk_live_)
  * 
  * Setup Instructions:
- * 1. Create a .env.local file in the frontend/nextjs directory
+ * 1. Create a .env.local file in the nrsgirls-platform/frontend directory
  * 2. Add: STRIPE_SECRET_KEY=sk_test_your_key_here
  * 3. For production, set this in Vercel/Render environment variables
  * 
