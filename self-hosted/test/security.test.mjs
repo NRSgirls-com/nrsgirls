@@ -6,10 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../server.mjs';
 
-async function fixture(t) {
+async function fixture(t, options = {}) {
   const dataDir = mkdtempSync(join(tmpdir(), 'nrs-regression-'));
   const port = 31000 + Math.floor(Math.random() * 10000), origin = `http://127.0.0.1:${port}`;
-  const app = await createApp({ dataDir, origin, adminEmail: 'admin@example.test', adminPassword: 'administrator test password' });
+  const app = await createApp({ dataDir, origin, adminEmail: 'admin@example.test', adminPassword: 'administrator test password', ...options });
   await new Promise(resolve => app.server.listen(port, '127.0.0.1', resolve));
   t.after(async () => { await app.close(); rmSync(dataDir, { recursive: true, force: true }); });
   const client = () => ({ cookie: '', csrf: '', user: null, async request(path, body, method = body ? 'POST' : 'GET') {
@@ -118,4 +118,36 @@ test('HEAD probes work for public health and static assets without login', async
     const response = await fetch(f.origin + path, { method: 'HEAD' });
     assert.equal(response.status, 200, path); assert.equal(await response.text(), '');
   }
+});
+
+async function broadcastFixture(t) {
+  let now = 0;
+  const f = await fixture(t, { presenceNow: () => now });
+  const creator = await f.register('performer', 'Creator'), viewer = await f.register('viewer', 'Viewer');
+  await f.approve(creator);
+  const room = (await creator.request('/api/rooms', { title: 'Live stage', private: false })).data.id;
+  const response = await fetch(`${f.origin}/api/rooms/${room}/events`, { headers: { cookie: creator.cookie } });
+  const reader = response.body.getReader();
+  t.after(async () => { await reader.cancel().catch(() => {}); });
+  const text = new TextDecoder().decode((await reader.read()).value);
+  const peer = JSON.parse(text.match(/data: (.*)/)[1]).peer;
+  assert.equal((await creator.request(`/api/rooms/${room}/broadcast`, { peer, live: true })).status, 200);
+  return { ...f, creator, viewer, room, peer, time: value => { now = value; }, isLive: async () => (await viewer.request('/api/rooms')).data.rooms.find(r => r.id === room).live };
+}
+
+test('live status expires when a broadcaster stops confirming presence', async t => {
+  const f = await broadcastFixture(t);
+  assert.equal(await f.isLive(), true);
+  f.time(45001);
+  assert.equal(await f.isLive(), false, 'a stale open connection must not keep the room live');
+});
+
+test('only the active broadcaster can renew its live lease', async t => {
+  const f = await broadcastFixture(t);
+  assert.equal((await f.viewer.request(`/api/rooms/${f.room}/heartbeat`, { peer: f.peer })).status, 403);
+  f.time(30000);
+  assert.equal((await f.creator.request(`/api/rooms/${f.room}/heartbeat`, { peer: f.peer })).status, 200);
+  f.time(60000); assert.equal(await f.isLive(), true);
+  f.time(75001); assert.equal(await f.isLive(), false);
+  assert.equal((await f.creator.request(`/api/rooms/${f.room}/heartbeat`, { peer: f.peer })).status, 409, 'expired leases cannot silently restart a broadcast');
 });
