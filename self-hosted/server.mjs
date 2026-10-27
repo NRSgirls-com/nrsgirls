@@ -24,6 +24,8 @@ export async function createApp(options = {}) {
   if (!['http:', 'https:'].includes(publicUrl.protocol) || publicUrl.username || publicUrl.password || publicUrl.pathname !== '/' || publicUrl.search || publicUrl.hash) throw new Error('PUBLIC_ORIGIN must be an HTTP or HTTPS origin without credentials, path, query or fragment');
   const origin = publicUrl.origin;
   if (production && !origin.startsWith('https://')) throw new Error('Production requires an HTTPS PUBLIC_ORIGIN');
+  const presenceNow = options.presenceNow ?? (() => performance.now());
+  if (typeof presenceNow !== 'function') throw new Error('presenceNow must be a clock function');
   const storageLimitMB = Number(options.storageLimitMB ?? process.env.AUDIO_STORAGE_LIMIT_MB ?? 200);
   if (!Number.isFinite(storageLimitMB) || storageLimitMB <= 0) throw new Error('AUDIO_STORAGE_LIMIT_MB must be a positive number');
   const storageLimit = storageLimitMB * 1024 * 1024;
@@ -79,6 +81,7 @@ export async function createApp(options = {}) {
   const clients = new Map();
   const rates = new Map();
   const live = new Map();
+  const liveDeadlines = new Map();
   const send = (client, type, data) => {
     if (client.res.writableLength > 1048576) { client.res.destroy(); return; }
     if (!client.res.destroyed && !client.res.writableEnded) client.res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -93,10 +96,22 @@ export async function createApp(options = {}) {
   function broadcast(room, type, data) {
     for (const c of clients.values()) if (c.room === room) send(c, type, data);
   }
+  function endBroadcast(room, reason = 'stopped') {
+    liveDeadlines.delete(room);
+    if (live.delete(room)) broadcast(room, 'broadcast-ended', { reason });
+  }
+  function expireBroadcasts() {
+    const now = presenceNow();
+    for (const [room, deadline] of liveDeadlines) if (deadline <= now) {
+      const owner = clients.get(live.get(room));
+      endBroadcast(room, 'presence-expired');
+      if (owner) detach(owner);
+    }
+  }
   function detach(c) {
     if (!clients.delete(c.id)) return;
     const wasLive = live.get(c.room) === c.id;
-    if (wasLive) { live.delete(c.room); broadcast(c.room, 'broadcast-ended', {}); }
+    if (wasLive) endBroadcast(c.room);
     broadcast(c.room, 'peer-left', { peer: c.id });
     c.res.end();
   }
@@ -257,6 +272,7 @@ export async function createApp(options = {}) {
         const stream = createReadStream(filename, { start, end }); stream.on('error', () => res.destroy()); res.on('close', () => stream.destroy()); return stream.pipe(res);
       }
       if (path === '/api/rooms' && req.method === 'GET') {
+        expireBroadcasts();
         const rooms = all('SELECT r.*, u.name AS creator FROM rooms r JOIN users u ON u.id=r.owner WHERE u.disabled=0 AND u.approved=1 ORDER BY r.created DESC');
         return json(res, 200, { rooms: rooms.filter(r => roomAccess(r, user)).map(r => ({ ...r, live: live.has(r.id) })) });
       }
@@ -268,8 +284,9 @@ export async function createApp(options = {}) {
         const id = randomUUID(); run('INSERT INTO rooms VALUES(?,?,?,?,?)', id, user.id, title, Number(b.private), Date.now());
         return json(res, 201, { id });
       }
-      const roomMatch = path.match(/^\/api\/rooms\/([^/]+)\/(messages|access|events|signal|broadcast|report)$/);
+      const roomMatch = path.match(/^\/api\/rooms\/([^/]+)\/(messages|access|events|signal|broadcast|heartbeat|report)$/);
       if (roomMatch) {
+        expireBroadcasts();
         const [, id, action] = roomMatch, room = requireRoom(id, user);
         if (action === 'messages' && req.method === 'GET') return json(res, 200, { messages: all('SELECT m.id,m.body,m.created,u.name FROM messages m JOIN users u ON u.id=m.user_id WHERE m.room=? ORDER BY m.id DESC LIMIT 100', id).reverse() });
         if (action === 'messages' && req.method === 'POST') {
@@ -307,16 +324,24 @@ export async function createApp(options = {}) {
           const active = clients.get(live.get(id)); if (active) send(active, 'viewer', { peer: c.id });
           req.on('close', () => detach(c)); return;
         }
+        if (action === 'heartbeat' && req.method === 'POST') {
+          if (room.owner !== user.id || !user.approved) fail(403, 'Approved room owner required');
+          const b = requestBody, c = clients.get(b.peer);
+          if (!c || live.get(id) !== c.id || c.userId !== user.id || c.room !== id || c.session !== session.token) fail(409, 'Broadcast expired or disconnected. Re-enter the room.');
+          liveDeadlines.set(id, presenceNow() + 45000);
+          return json(res, 200, { ok: true });
+        }
         if (action === 'broadcast' && req.method === 'POST') {
           if (room.owner !== user.id || !user.approved) fail(403, 'Approved room owner required');
           const b = requestBody, c = clients.get(b.peer);
           if (!c || c.userId !== user.id || c.room !== id || c.session !== session.token) fail(400, 'Connect to the room first');
           if (typeof b.live !== 'boolean') fail(400, 'Invalid broadcast state');
           if (!b.live) {
-            if (live.get(id) === c.id) { live.delete(id); broadcast(id, 'broadcast-ended', {}); }
+            if (live.get(id) === c.id) endBroadcast(id);
           } else {
             if (live.has(id) && live.get(id) !== c.id) fail(409, 'Another tab is broadcasting');
             live.set(id, c.id);
+            liveDeadlines.set(id, presenceNow() + 45000);
             broadcast(id, 'broadcast-started', { peer: c.id });
             for (const viewer of clients.values()) if (viewer.room === id && viewer.id !== c.id) send(c, 'viewer', { peer: viewer.id });
           }
@@ -397,6 +422,7 @@ export async function createApp(options = {}) {
   });
   server.requestTimeout = 20000; server.headersTimeout = 10000;
   const cleanup = setInterval(() => {
+    expireBroadcasts();
     const now = Date.now();
     run('DELETE FROM sessions WHERE expires<?', now);
     for (const [id, r] of rates) if (r.until < now) rates.delete(id);
