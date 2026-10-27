@@ -18,8 +18,28 @@ const field = (value, name, max = 160) => {
 
 export async function createApp(options = {}) {
   const production = options.production ?? process.env.NODE_ENV === 'production';
-  const origin = new URL(options.origin || process.env.PUBLIC_ORIGIN || 'http://localhost:3000').origin;
+  let publicUrl;
+  try { publicUrl = new URL(options.origin || process.env.PUBLIC_ORIGIN || `http://localhost:${process.env.PORT || 3000}`); }
+  catch { throw new Error('PUBLIC_ORIGIN must be an HTTP or HTTPS origin'); }
+  if (!['http:', 'https:'].includes(publicUrl.protocol) || publicUrl.username || publicUrl.password || publicUrl.pathname !== '/' || publicUrl.search || publicUrl.hash) throw new Error('PUBLIC_ORIGIN must be an HTTP or HTTPS origin without credentials, path, query or fragment');
+  const origin = publicUrl.origin;
   if (production && !origin.startsWith('https://')) throw new Error('Production requires an HTTPS PUBLIC_ORIGIN');
+  const storageLimitMB = Number(options.storageLimitMB ?? process.env.AUDIO_STORAGE_LIMIT_MB ?? 200);
+  if (!Number.isFinite(storageLimitMB) || storageLimitMB <= 0) throw new Error('AUDIO_STORAGE_LIMIT_MB must be a positive number');
+  const storageLimit = storageLimitMB * 1024 * 1024;
+  let iceServers;
+  try { iceServers = options.iceServers ?? JSON.parse(process.env.ICE_SERVERS_JSON || '[]'); }
+  catch { throw new Error('ICE_SERVERS_JSON must contain valid JSON'); }
+  if (!Array.isArray(iceServers) || iceServers.length > 8 || iceServers.some(s => {
+    if (!s || typeof s !== 'object' || Array.isArray(s)) return true;
+    const urls = typeof s.urls === 'string' ? [s.urls] : s.urls;
+    return !Array.isArray(urls) || !urls.length || urls.length > 8 || urls.some(u => typeof u !== 'string' || !/^(stun|stuns|turn|turns):[^\s]+$/i.test(u)) ||
+      (s.username !== undefined && typeof s.username !== 'string') || (s.credential !== undefined && typeof s.credential !== 'string');
+  })) throw new Error('ICE_SERVERS_JSON must be an array of valid STUN/TURN server objects');
+  const adminEmail = options.adminEmail || process.env.ADMIN_EMAIL;
+  const adminPassword = options.adminPassword || process.env.ADMIN_PASSWORD;
+  if (adminEmail && (typeof adminEmail !== 'string' || adminEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail.trim()))) throw new Error('Invalid administrator email');
+  if (adminPassword && (typeof adminPassword !== 'string' || adminPassword.length < 12 || adminPassword.length > 128)) throw new Error('Administrator password must have 12–128 characters');
   const dataDir = options.dataDir || process.env.DATA_DIR || join(here, 'data');
   mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   mkdirSync(join(dataDir, 'audio'), { recursive: true, mode: 0o700 });
@@ -49,8 +69,6 @@ export async function createApp(options = {}) {
     const actual = Buffer.from(await derive(password, salt, 64));
     return timingSafeEqual(actual, Buffer.from(expected, 'hex'));
   }
-  const adminEmail = options.adminEmail || process.env.ADMIN_EMAIL;
-  const adminPassword = options.adminPassword || process.env.ADMIN_PASSWORD;
   if (adminEmail && adminPassword && !get('SELECT id FROM users WHERE role=?', 'admin')) {
     run('INSERT INTO users VALUES(?,?,?,?,?,1,0,?)', randomUUID(), adminEmail.toLowerCase().trim(), 'Administrator', await passwordHash(adminPassword), 'admin', Date.now());
   }
@@ -58,8 +76,6 @@ export async function createApp(options = {}) {
     db.close();
     throw new Error('First start requires ADMIN_EMAIL and ADMIN_PASSWORD (12+ characters). No public admin signup is allowed.');
   }
-  const iceServers = options.iceServers || JSON.parse(process.env.ICE_SERVERS_JSON || '[]');
-  if (!Array.isArray(iceServers)) throw new Error('ICE_SERVERS_JSON must be an array');
   const clients = new Map();
   const rates = new Map();
   const live = new Map();
@@ -96,7 +112,7 @@ export async function createApp(options = {}) {
     else if (++current.count > limit) fail(429, 'Too many requests. Try again later.');
   }
   async function body(req) {
-    if (!req.headers['content-type']?.startsWith('application/json')) fail(415, 'Use application/json');
+    if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] || '')) fail(415, 'Use application/json');
     let size = 0; const chunks = [];
     for await (const chunk of req) {
       size += chunk.length;
@@ -165,15 +181,26 @@ export async function createApp(options = {}) {
         const user = get('SELECT * FROM users WHERE email=?', email);
         const dummy = '00000000000000000000000000000000:' + '0'.repeat(128);
         const valid = await passwordMatches(b.password, user?.password || dummy);
-        if (!user || !valid || user.disabled) fail(401, 'Invalid credentials');
-        return json(res, 200, startSession(res, user));
+        const current = user && get('SELECT * FROM users WHERE id=?', user.id);
+        if (!current || !valid || current.disabled || current.password !== user.password) fail(401, 'Invalid credentials');
+        return json(res, 200, startSession(res, current));
       }
-      const identity = auth(req);
+      let identity = auth(req);
       if (path === '/api/me' && req.method === 'GET') return json(res, 200, identity ? { user: safeUser(identity.user), csrf: identity.session.csrf } : { user: null });
       if (!identity) fail(401, 'Sign in required');
+      if (mutation && req.headers['x-csrf-token'] !== identity.session.csrf) fail(403, 'Refresh this page and try again');
+      let requestBody;
+      if (mutation) {
+        rate(req, `write:${identity.user.id}`, 180);
+        if (!(path === '/api/mixes' && req.method === 'POST')) {
+          requestBody = await body(req);
+          // Finish reading before making any role, room, or invitation authorization decision.
+          identity = auth(req);
+          if (!identity) fail(401, 'Sign in required');
+          if (req.headers['x-csrf-token'] !== identity.session.csrf) fail(403, 'Refresh this page and try again');
+        }
+      }
       const { user, session } = identity;
-      if (mutation && req.headers['x-csrf-token'] !== session.csrf) fail(403, 'Refresh this page and try again');
-      if (mutation) rate(req, `write:${user.id}`, 180);
       if (path === '/api/logout' && req.method === 'POST') {
         run('DELETE FROM sessions WHERE token=?', session.token);
         for (const c of [...clients.values()]) if (c.session === session.token) detach(c);
@@ -187,11 +214,13 @@ export async function createApp(options = {}) {
         let title; try { title = decodeURIComponent(req.headers['x-track-title'] || ''); } catch { fail(400, 'Invalid track title'); }
         title = field(title, 'title', 100);
         const maxBytes = 20 * 1024 * 1024;
-        const storageLimit = Number(process.env.AUDIO_STORAGE_LIMIT_MB || 200) * 1024 * 1024;
         const used = get('SELECT COALESCE(SUM(size),0) AS size FROM mixes').size;
         if (used >= storageLimit) fail(507, 'Local audio storage is full');
         let size = 0; const chunks = [];
         for await (const chunk of req) { size += chunk.length; if (size > maxBytes || used + size > storageLimit) fail(413, 'Audio exceeds the 20 MB upload or server storage limit'); chunks.push(chunk); }
+        const currentIdentity = auth(req);
+        if (!currentIdentity || currentIdentity.session.token !== session.token) fail(401, 'Sign in required');
+        if (!currentIdentity.user.approved || !['dj', 'admin'].includes(currentIdentity.user.role)) fail(403, 'Approved DJ account required');
         const audio = Buffer.concat(chunks);
         if (audio.length < 4 || !(audio.subarray(0, 3).toString() === 'ID3' || (audio[0] === 0xff && (audio[1] & 0xe0) === 0xe0))) fail(400, 'Expected MP3 signature');
         // Header recognition is not a malware scan or a full codec validation. All uploads remain pending human review.
@@ -207,7 +236,10 @@ export async function createApp(options = {}) {
       if (mediaMatch && ['GET', 'HEAD'].includes(req.method)) {
         const mix = get('SELECT m.* FROM mixes m JOIN users u ON u.id=m.owner WHERE m.id=? AND u.disabled=0 AND u.approved=1', mediaMatch[1]);
         if (!mix || (mix.state !== 'approved' && user.role !== 'admin')) fail(404, 'Audio unavailable');
-        const filename = join(dataDir, 'audio', `${mix.id}.mp3`), size = statSync(filename).size;
+        const filename = join(dataDir, 'audio', `${mix.id}.mp3`);
+        let size;
+        try { size = statSync(filename).size; }
+        catch (error) { if (error.code === 'ENOENT') fail(404, 'Audio unavailable'); throw error; }
         let start = 0, end = size - 1, status = 200;
         if (req.headers.range) {
           const range = req.headers.range.match(/^bytes=(\d*)-(\d*)$/);
@@ -227,7 +259,7 @@ export async function createApp(options = {}) {
       }
       if (path === '/api/rooms' && req.method === 'POST') {
         if (!user.approved || !['performer', 'admin'].includes(user.role)) fail(403, 'Approved performer account required');
-        const b = await body(req), title = field(b.title, 'title', 80);
+        const b = requestBody, title = field(b.title, 'title', 80);
         if (typeof b.private !== 'boolean') fail(400, 'Choose public or private');
         if (get('SELECT id FROM rooms WHERE owner=? AND private=?', user.id, Number(b.private))) fail(409, 'You already have a room of this type');
         const id = randomUUID(); run('INSERT INTO rooms VALUES(?,?,?,?,?)', id, user.id, title, Number(b.private), Date.now());
@@ -239,21 +271,21 @@ export async function createApp(options = {}) {
         if (action === 'messages' && req.method === 'GET') return json(res, 200, { messages: all('SELECT m.id,m.body,m.created,u.name FROM messages m JOIN users u ON u.id=m.user_id WHERE m.room=? ORDER BY m.id DESC LIMIT 100', id).reverse() });
         if (action === 'messages' && req.method === 'POST') {
           rate(req, `chat:${user.id}`, 30);
-          const b = await body(req), text = field(b.body, 'message', 1000), now = Date.now();
+          const b = requestBody, text = field(b.body, 'message', 1000), now = Date.now();
           const result = run('INSERT INTO messages(room,user_id,body,created) VALUES(?,?,?,?)', id, user.id, text, now);
           const message = { id: Number(result.lastInsertRowid), body: text, name: user.name, created: now };
           broadcast(id, 'message', message); return json(res, 201, message);
         }
         if (action === 'report' && req.method === 'POST') {
           rate(req, `report:${user.id}`, 5);
-          const b = await body(req); run('INSERT INTO reports(reporter,room,reason,created) VALUES(?,?,?,?)', user.id, id, field(b.reason, 'reason', 2000), Date.now());
+          const b = requestBody; run('INSERT INTO reports(reporter,room,reason,created) VALUES(?,?,?,?)', user.id, id, field(b.reason, 'reason', 2000), Date.now());
           return json(res, 201, { ok: true });
         }
         if (action === 'access' && ['GET', 'POST', 'DELETE'].includes(req.method)) {
           if (room.owner !== user.id && user.role !== 'admin') fail(403, 'Room owner required');
           if (!room.private) fail(400, 'Only private rooms use invitations');
           if (req.method === 'GET') return json(res, 200, { guests: all('SELECT u.id,u.name FROM grants g JOIN users u ON u.id=g.user_id WHERE g.room=?', id) });
-          const b = await body(req), guest = get('SELECT id FROM users WHERE email=? AND disabled=0', field(b.email, 'email', 254).toLowerCase());
+          const b = requestBody, guest = get('SELECT id FROM users WHERE email=? AND disabled=0', field(b.email, 'email', 254).toLowerCase());
           if (!guest) fail(404, 'Registered account not found');
           if (req.method === 'POST') run('INSERT OR IGNORE INTO grants VALUES(?,?)', id, guest.id);
           else { run('DELETE FROM grants WHERE room=? AND user_id=?', id, guest.id); endUserConnections(guest.id, id); }
@@ -263,7 +295,9 @@ export async function createApp(options = {}) {
           rate(req, 'events', 40);
           if ([...clients.values()].filter(c => c.userId === user.id).length >= 4) fail(429, 'Close another room tab first');
           if (clients.size >= 200) fail(503, 'This small server is at capacity');
-          if ([...clients.values()].filter(c => c.room === id).length >= 12) fail(503, 'This small-group room is full');
+          const roomClients = [...clients.values()].filter(c => c.room === id);
+          const ownerConnected = roomClients.some(c => c.userId === room.owner);
+          if (roomClients.length >= 12 || (user.id !== room.owner && !ownerConnected && roomClients.length >= 11)) fail(503, 'This small-group room is full');
           res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no' });
           const c = { id: randomUUID(), userId: user.id, room: id, res, session: session.token }; clients.set(c.id, c);
           send(c, 'welcome', { peer: c.id, broadcaster: live.get(id) || null, iceServers });
@@ -272,7 +306,7 @@ export async function createApp(options = {}) {
         }
         if (action === 'broadcast' && req.method === 'POST') {
           if (room.owner !== user.id || !user.approved) fail(403, 'Approved room owner required');
-          const b = await body(req), c = clients.get(b.peer);
+          const b = requestBody, c = clients.get(b.peer);
           if (!c || c.userId !== user.id || c.room !== id || c.session !== session.token) fail(400, 'Connect to the room first');
           if (typeof b.live !== 'boolean') fail(400, 'Invalid broadcast state');
           if (!b.live) {
@@ -286,7 +320,7 @@ export async function createApp(options = {}) {
           return json(res, 200, { ok: true });
         }
         if (action === 'signal' && req.method === 'POST') {
-          const b = await body(req), from = clients.get(b.from), to = clients.get(b.to);
+          const b = requestBody, from = clients.get(b.from), to = clients.get(b.to);
           if (!from || !to || from.userId !== user.id || from.session !== session.token || from.room !== id || to.room !== id) fail(403, 'Invalid peer');
           const active = live.get(id);
           if (!active || (from.id !== active && to.id !== active)) fail(403, 'No active broadcast for these peers');
@@ -297,12 +331,19 @@ export async function createApp(options = {}) {
         fail(405, 'Method not allowed');
       }
       if (path === '/api/dj' && req.method === 'GET') {
-        const state = get('SELECT value FROM settings WHERE key=?', 'dj');
-        return json(res, 200, { state: state ? JSON.parse(state.value) : null, serverTime: Date.now() });
+        const record = get('SELECT value FROM settings WHERE key=?', 'dj');
+        let state = record ? JSON.parse(record.value) : null;
+        const creator = state && get('SELECT id FROM users WHERE id=? AND approved=1 AND disabled=0', state.djId || '');
+        if (!creator) state = null;
+        if (state) {
+          const audio = new URL(state.url), local = audio.origin === origin && audio.pathname.match(/^\/api\/media\/([0-9a-f-]{36})$/);
+          if (local && !get('SELECT m.id FROM mixes m JOIN users u ON u.id=m.owner WHERE m.id=? AND m.state=? AND u.approved=1 AND u.disabled=0', local[1], 'approved')) state = null;
+        }
+        return json(res, 200, { state, serverTime: Date.now() });
       }
       if (path === '/api/dj' && req.method === 'POST') {
         if (!user.approved || !['dj', 'admin'].includes(user.role)) fail(403, 'Approved DJ account required');
-        const b = await body(req), title = field(b.title, 'title', 100);
+        const b = requestBody, title = field(b.title, 'title', 100);
         if (b.rights !== true) fail(400, 'Confirm permission to broadcast this audio');
         const requestedUrl = field(b.url, 'audio URL', 2048);
         let audio; try { audio = new URL(requestedUrl, origin); } catch { fail(400, 'Invalid audio URL'); }
@@ -314,7 +355,7 @@ export async function createApp(options = {}) {
         } else if (audio.protocol !== 'https:' || audio.username || audio.password) fail(400, 'Use an approved local mix or direct HTTPS audio URL without credentials');
         const position = Number(b.position || 0);
         if (!Number.isFinite(position) || position < 0 || position > 86400 || typeof b.playing !== 'boolean') fail(400, 'Invalid playback state');
-        const state = { title, url: audio.href, position, playing: b.playing, updated: Date.now(), dj: user.name };
+        const state = { title, url: audio.href, position, playing: b.playing, updated: Date.now(), dj: user.name, djId: user.id };
         run('INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', 'dj', JSON.stringify(state));
         return json(res, 200, { state });
       }
@@ -322,12 +363,13 @@ export async function createApp(options = {}) {
         if (user.role !== 'admin') fail(403, 'Administrator required');
         if (path === '/api/admin/mixes' && req.method === 'GET') return json(res, 200, { mixes: all('SELECT m.*,u.name AS dj FROM mixes m JOIN users u ON u.id=m.owner ORDER BY m.created DESC') });
         if (path === '/api/admin/mixes' && req.method === 'POST') {
-          const b = await body(req); if (!['pending', 'approved', 'rejected'].includes(b.state) || typeof b.id !== 'string') fail(400, 'Invalid mix review');
-          run('UPDATE mixes SET state=? WHERE id=?', b.state, b.id); return json(res, 200, { ok: true });
+          const b = requestBody; if (!['pending', 'approved', 'rejected'].includes(b.state) || typeof b.id !== 'string') fail(400, 'Invalid mix review');
+          if (!run('UPDATE mixes SET state=? WHERE id=?', b.state, b.id).changes) fail(404, 'Mix not found');
+          return json(res, 200, { ok: true });
         }
         if (path === '/api/admin/users' && req.method === 'GET') return json(res, 200, { users: all('SELECT * FROM users ORDER BY created DESC').map(u => ({ ...safeUser(u), email: u.email })) });
         if (path === '/api/admin/users' && req.method === 'POST') {
-          const b = await body(req), target = get('SELECT * FROM users WHERE id=?', b.id);
+          const b = requestBody, target = get('SELECT * FROM users WHERE id=?', field(b.id, 'account ID', 36));
           if (!target || target.role === 'admin') fail(400, 'Choose a non-admin account');
           if (typeof b.approved !== 'boolean' || typeof b.disabled !== 'boolean') fail(400, 'Invalid account state');
           run('UPDATE users SET approved=?,disabled=? WHERE id=?', Number(b.approved), Number(b.disabled), b.id);
@@ -337,8 +379,9 @@ export async function createApp(options = {}) {
         }
         if (path === '/api/admin/reports' && req.method === 'GET') return json(res, 200, { reports: all('SELECT id,room,reason,state,created FROM reports ORDER BY id DESC LIMIT 200') });
         if (path === '/api/admin/reports' && req.method === 'POST') {
-          const b = await body(req); if (!['open', 'resolved'].includes(b.state) || !Number.isInteger(b.id)) fail(400, 'Invalid report');
-          run('UPDATE reports SET state=? WHERE id=?', b.state, b.id); return json(res, 200, { ok: true });
+          const b = requestBody; if (!['open', 'resolved'].includes(b.state) || !Number.isSafeInteger(b.id) || b.id < 1) fail(400, 'Invalid report');
+          if (!run('UPDATE reports SET state=? WHERE id=?', b.state, b.id).changes) fail(404, 'Report not found');
+          return json(res, 200, { ok: true });
         }
       }
       if (path === '/api/checkout' && req.method === 'POST') fail(503, 'Payments are disabled. No charges can be collected by this app.');
