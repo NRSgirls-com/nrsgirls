@@ -2,12 +2,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-# Try root-level frontend/nextjs first
-FRONTEND_DIR="$ROOT/frontend/nextjs"
-if [ ! -d "$FRONTEND_DIR" ]; then
-  # Fall back to platform frontend
-  FRONTEND_DIR="$ROOT/nrsgirls-platform/frontend"
-fi
+# Use platform frontend
+FRONTEND_DIR="$ROOT/nrsgirls-platform/frontend"
 
 if [ ! -d "$FRONTEND_DIR" ]; then
   echo "Frontend directory not found"

@@ -6,49 +6,43 @@ on:
   pull_request:
     branches: ['**']
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-test-and-build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nrsgirls-platform/frontend
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js 18
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: |
-            frontend/nextjs/yarn.lock
+          node-version: '22'
 
-      - name: Enable Corepack
+      - name: Enable pinned Yarn
         run: |
           corepack enable
           corepack prepare yarn@1.22.22 --activate
 
-      - name: Run setup script
-        run: |
-          if [ -f "nrsgirls-platform/scripts/setup.sh" ]; then
-            bash nrsgirls-platform/scripts/setup.sh
-          fi
+      - name: Cache Yarn downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/yarn
+          key: ${{ runner.os }}-node22-yarn-${{ hashFiles('nrsgirls-platform/frontend/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node22-yarn-
 
       - name: Install frontend dependencies
-        run: |
-          if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
-            cd frontend/nextjs
-            yarn install --frozen-lockfile
-          fi
+        run: yarn install --frozen-lockfile --non-interactive --cache-folder ~/.cache/yarn
 
-      - name: Lint and test frontend
-        run: |
-          if [ -f "nrsgirls-platform/scripts/lint-test.sh" ]; then
-            bash nrsgirls-platform/scripts/lint-test.sh
-          fi
+      - name: Lint and test
+        run: bash ../scripts/lint-test.sh
 
       - name: Build frontend
-        run: |
-          if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
-            cd frontend/nextjs
-            yarn build
-          fi
+        run: yarn build

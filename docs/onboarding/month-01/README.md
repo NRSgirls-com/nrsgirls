@@ -16,7 +16,7 @@
 - Week 4 — WebRTC concepts + baseline signalling stub
 
 ## Repo conventions (Month 1)
-- Package manager: **pnpm**
+- Package manager: **yarn**
 - Code style: ESLint + Prettier (`"semi": false`, `"singleQuote": true`)
 - Paths:
   - App: `/app` (Next.js app router)
@@ -30,17 +30,17 @@
 
 ## Install (local)
 ```bash
-# Node & pnpm
+# Node & yarn
 node -v
 corepack enable
-pnpm -v
+yarn -v
 
 # Install deps
-pnpm i
+yarn install
 
 # Dev env
 cp .env.example .env.local
-pnpm dev
+yarn dev
 ```
 
 ## Milestones (Month 1)
