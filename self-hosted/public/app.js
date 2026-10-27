@@ -171,7 +171,7 @@ async function loadAdmin() {
   const [u, r, mixes] = await Promise.all([api('/api/admin/users'), api('/api/admin/reports'), api('/api/admin/mixes')]);
   $('users').replaceChildren(); $('reports').replaceChildren();
   for (const user of u.users) {
-    const card = node('div', undefined, 'review'); card.append(node('strong', user.name), node('p', `${user.role} · ${user.disabled ? 'suspended' : user.approved ? 'approved' : 'pending'}`));
+    const card = node('div', undefined, 'review'); card.append(node('strong', user.name), node('p', user.email, 'muted'), node('p', `${user.role} · ${user.disabled ? 'suspended' : user.approved ? 'approved' : 'pending'}`));
     if (user.role !== 'admin') {
       const update = async (approved, disabled) => { await api('/api/admin/users', 'POST', { id: user.id, approved, disabled }); await loadAdmin(); await loadRooms(); };
       card.append(action(user.approved ? 'Withdraw approval' : 'Approve after review', () => update(!user.approved, user.disabled)), action(user.disabled ? 'Restore account' : 'Suspend account', () => update(user.approved, !user.disabled)));
