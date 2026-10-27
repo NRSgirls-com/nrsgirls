@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 let identity = null, csrf = '', selected = null, events = null, peerId = null, media = null, broadcaster = null;
 let iceServers = [], peers = new Map(), pending = new Map(), djState = null, offset = 0, roomGeneration = 0;
 let radioEnabled = false, radioTransition = false, djGeneration = 0, accountGeneration = 0;
+let presenceRequest = false;
 const notice = (text, error = false) => { $('status').textContent = text; $('status').classList.toggle('error', error); };
 async function request(path, options) {
   const generation = accountGeneration, account = identity?.id;
@@ -89,6 +90,7 @@ $('create-room').addEventListener('submit', guarded(async () => {
 function clearPeers() { for (const pc of peers.values()) pc.close(); peers.clear(); pending.clear(); }
 function stopMedia() { if (media) for (const track of media.getTracks()) track.stop(); media = null; clearPeers(); $('video').srcObject = null; $('stop-live').hidden = true; }
 function disconnectRoom(message) {
+  ++roomGeneration;
   events?.close(); events = null; stopMedia(); peerId = null; broadcaster = null;
   $('connection').textContent = message;
 }
@@ -119,7 +121,7 @@ async function enterRoom(room) {
   event('message', showMessage);
   event('viewer', async data => { if (media && broadcaster === peerId) await offer(data.peer); });
   event('broadcast-started', data => { broadcaster = data.peer; $('connection').textContent = 'Broadcast starting…'; });
-  event('broadcast-ended', () => { broadcaster = null; clearPeers(); if (!media) $('video').srcObject = null; $('connection').textContent = 'Broadcast ended.'; });
+  event('broadcast-ended', data => { broadcaster = null; stopMedia(); $('connection').textContent = data.reason === 'presence-expired' ? 'Broadcast presence expired. Re-enter the room to reconnect.' : 'Broadcast ended.'; });
   event('peer-left', data => { peers.get(data.peer)?.close(); peers.delete(data.peer); pending.delete(data.peer); });
   event('signal', receiveSignal);
   stream.onerror = () => { if (generation !== roomGeneration) return; disconnectRoom('Room disconnected. Re-enter the room to reconnect; access may have changed.'); };
@@ -183,14 +185,18 @@ $('go-live').onclick = guarded(async () => {
   const capture = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
   if (generation !== roomGeneration) { capture.getTracks().forEach(t => t.stop()); return; }
   media = capture; clearPeers(); $('video').muted = true; $('video').srcObject = media;
+  for (const track of capture.getTracks()) if (track.kind === 'video') track.addEventListener('ended', () => {
+    if (currentRoom(context) && media === capture) stopBroadcast().catch(e => notice(e.message, true));
+  });
   // Set locally before the request: viewer notifications may arrive before the HTTP response.
   broadcaster = peerId;
   try { await api(`/api/rooms/${selected.id}/broadcast`, 'POST', { peer: peerId, live: true }); }
   catch (e) { if (currentRoom(context)) { disconnectRoom('Camera stopped. Re-enter the room before broadcasting again.'); throw e; } return; }
   if (!currentRoom(context)) return;
+  if (media !== capture) { await stopBroadcast(); return; }
   $('go-live').hidden = true; $('stop-live').hidden = false; $('connection').textContent = 'You are broadcasting. Keep this tab open.';
 });
-$('stop-live').onclick = guarded(async () => {
+async function stopBroadcast() {
   const context = roomContext();
   const ending = api(`/api/rooms/${context.room}/broadcast`, 'POST', { peer: context.peer, live: false });
   stopMedia(); broadcaster = null;
@@ -198,7 +204,17 @@ $('stop-live').onclick = guarded(async () => {
   try { await ending; if (currentRoom(context)) $('connection').textContent = 'Broadcast ended.'; }
   catch (error) { if (currentRoom(context)) disconnectRoom('Camera stopped. Re-enter the room to reconnect after the server error.'); throw error; }
   finally { if (currentRoom(context)) $('go-live').hidden = false; }
-});
+}
+$('stop-live').onclick = guarded(stopBroadcast);
+async function renewPresence() {
+  if (presenceRequest || !media || !peerId || broadcaster !== peerId) return;
+  if (!media.getTracks().some(track => track.kind === 'video' && track.readyState === 'live')) { await stopBroadcast(); return; }
+  const context = roomContext(); presenceRequest = true;
+  try { await api(`/api/rooms/${context.room}/heartbeat`, 'POST', { peer: context.peer }); }
+  catch {
+    if (currentRoom(context)) disconnectRoom('Camera stopped because broadcast presence could not be confirmed. Re-enter the room.');
+  } finally { presenceRequest = false; }
+}
 async function loadDj() {
   const generation = ++djGeneration, account = identity?.id;
   const start = Date.now(), result = await api('/api/dj');
@@ -284,4 +300,5 @@ $('admin-refresh').onclick = guarded(loadAdmin);
 window.addEventListener('pagehide', leaveRoom);
 window.addEventListener('pageshow', event => { if (event.persisted && identity) refresh().catch(e => notice(e.message, true)); });
 setInterval(() => { if (identity) loadDj().catch(() => {}); }, 5000);
+setInterval(() => { renewPresence().catch(e => notice(e.message, true)); }, 10000);
 api('/api/me').then(async result => { applyIdentity(result); if (identity) await refresh(); }).catch(e => notice(e.message, true));
