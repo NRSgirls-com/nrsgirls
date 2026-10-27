@@ -177,3 +177,58 @@ test('a failed broadcast stop closes signaling instead of leaving a false live s
   await h.element('stop-live').onclick({ preventDefault() {} });
   assert.equal(closed, 1); assert.equal(h.run('peerId'), null);
 });
+
+test('live presence is renewed only by a locally active broadcaster', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  const calls = [];
+  h.respond(async (path, options) => { calls.push({ path, options }); return { ok: true }; });
+  await h.run('renewPresence()'); assert.equal(calls.length, 0);
+  h.context.capture = { getTracks: () => [{ kind: 'video', readyState: 'live' }] };
+  h.run('identity={id:"creator"}; selected={id:"room"}; peerId="owner"; broadcaster=peerId; media=capture;');
+  await h.run('renewPresence()');
+  assert.equal(calls[0].path, '/api/rooms/room/heartbeat');
+  assert.equal(JSON.parse(calls[0].options.body).peer, 'owner');
+});
+
+test('loss of live presence confirmation stops capture and disconnects the room', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  let stopped = 0, closed = 0;
+  h.context.capture = { getTracks: () => [{ kind: 'video', readyState: 'live', stop() { stopped++; } }] };
+  h.context.roomEvents = { close() { closed++; } };
+  h.run('identity={id:"creator"}; selected={id:"room"}; peerId="owner"; broadcaster=peerId; media=capture; events=roomEvents;');
+  h.respond(async () => ({ __status: 409, error: 'Broadcast expired' }));
+  await h.run('renewPresence()');
+  assert.equal(stopped, 1); assert.equal(closed, 1); assert.equal(h.run('peerId'), null);
+});
+
+test('camera hardware ending also stops microphone capture', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  let videoEnded, microphoneStopped = false;
+  const video = { kind: 'video', readyState: 'live', addEventListener(type, fn) { if (type === 'ended') videoEnded = fn; }, stop() { this.readyState = 'ended'; } };
+  const microphone = { kind: 'audio', stop() { microphoneStopped = true; } };
+  h.context.navigator = { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [video, microphone] }) } };
+  h.run('identity={id:"creator",approved:true}; selected={id:"room"}; peerId="peer";');
+  h.respond(async () => ({ ok: true }));
+  await h.element('go-live').onclick({ preventDefault() {} });
+  assert.equal(typeof videoEnded, 'function');
+  video.readyState = 'ended'; videoEnded();
+  assert.equal(microphoneStopped, true);
+  await new Promise(resolve => setImmediate(resolve));
+});
+
+test('camera ending during broadcast startup cannot produce a false live confirmation', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  let videoEnded, confirmStart;
+  const video = { kind: 'video', readyState: 'live', addEventListener(type, fn) { if (type === 'ended') videoEnded = fn; }, stop() { this.readyState = 'ended'; } };
+  h.context.navigator = { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [video] }) } };
+  h.run('identity={id:"creator",approved:true}; selected={id:"room"}; peerId="peer";');
+  h.respond(async (path, options) => JSON.parse(options.body).live === true ? new Promise(resolve => { confirmStart = resolve; }) : { ok: true });
+  const starting = h.element('go-live').onclick({ preventDefault() {} });
+  await new Promise(resolve => setImmediate(resolve));
+  video.readyState = 'ended'; videoEnded();
+  await new Promise(resolve => setImmediate(resolve));
+  confirmStart({ ok: true }); await starting;
+  assert.equal(h.run('media'), null);
+  assert.equal(h.element('go-live').hidden, false);
+  assert.equal(h.element('connection').textContent, 'Broadcast ended.');
+});
