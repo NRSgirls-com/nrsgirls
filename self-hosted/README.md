@@ -2,7 +2,7 @@
 
 This is the runnable application. It uses **Node.js 24 LTS**, the built-in SQLite database, and browser APIs. No npm dependencies, package installation, subscription, external database, payment account, or Vercel account is required. Running on an existing computer incurs no new hosting charge; internet access, electricity, and the computer remain your responsibility.
 
-The older Next.js scaffold is retained in `nrsgirls-platform/frontend/` so previous work is not lost. It is not needed by this app. The two apps do not share accounts or databases.
+The older Next.js scaffold is retained in `nrsgirls-platform/frontend/` so previous work is not lost. It is not needed by this app. The two apps do not share accounts or databases. Hosted Actions is currently blocked before jobs start by an upstream account restriction; run the local verification commands below without a hosted runner.
 
 ## Start on your Mac or Linux computer
 
@@ -50,7 +50,7 @@ An adult checkbox records a self-declaration at registration, not identity verif
 
 ## Tests
 
-See [REPAIR_LOG.md](REPAIR_LOG.md) for the numbered defect review, reproductions, repairs, and unresolved verification. The suite now includes 17 named tests, including delayed HTTP request authorization, account/media races, room capacity, configuration validation, and actual startup subprocesses. Browser-code tests use controlled DOM/media stubs; they do not replace real-browser acceptance tests.
+See [REPAIR_LOG.md](REPAIR_LOG.md) for the numbered defect review, reproductions, repairs, and unresolved verification. The suite now includes 25 named tests, including delayed HTTP request authorization, account/media races, room capacity, configuration validation, and actual startup subprocesses. Browser-code tests use controlled DOM/media stubs; they do not replace real-browser acceptance tests.
 
 ```bash
 npm run check
