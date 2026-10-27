@@ -24,7 +24,9 @@ The first implementation passed its broad API test but had defects that test did
 | 18 | Rejected room entry left an unconnected room panel visible indefinitely. | Clear the failed room and ignore obsolete scrolling. Client-code revoked-room regression. |
 | 19 | Malformed HTTP request targets generated internal server errors. | Return 400 for invalid request URLs. Raw HTTP regression. |
 | 20 | Public HEAD health probes required login; static HEAD probes were rejected. | Support anonymous HEAD for health and static assets with empty response bodies. HTTP regressions cover all four public endpoints. |
-| 21 | An uncertain broadcast start/stop left its signaling session open. | Close signaling and require room reconnection after failure, while keeping capture off. A failed-stop regression verifies disconnection. A network partition can still delay the server learning a connection has closed; this is not a globally synchronized presence service. |
+| 21 | An uncertain broadcast start/stop left its signaling session open. | Close signaling and require room reconnection after failure, while keeping capture off. A failed-stop regression verifies disconnection. The lease in repair 22 now bounds stale application presence; it does not establish that every viewer is receiving media. |
+| 22 | A stale open connection could keep a room marked LIVE after the broadcaster disappeared. | Add authenticated 10-second client heartbeats and a 45-second server lease using a monotonic clock. Expired leases close the broadcaster connection and cannot be renewed by viewers or silently resurrected. HTTP/SSE tests advance a controlled clock to reproduce expiry and renewal. |
+| 23 | Camera hardware ending could leave microphone capture active or be followed by a false startup confirmation. | Stop all capture when the video track ends and recheck capture ownership after startup completes. Client regressions cover both hardware loss and hardware loss during a pending start. |
 
 ## Verification
 
@@ -35,7 +37,7 @@ bash -n self-hosted/start-local.sh
 git diff --check
 ```
 
-The suite has **25 named tests**, including HTTP/database workflows, real SSE signaling and capacity, delayed-body authorization regressions, isolated browser-code state tests with mocks, and real startup subprocesses. The client tests execute the actual `app.js` code against controlled DOM/media stubs; they are not browser/device acceptance tests.
+The suite has **31 named tests**, including HTTP/database workflows, real SSE signaling and capacity, delayed-body authorization regressions, isolated browser-code state tests with mocks, and real startup subprocesses. The client tests execute the actual `app.js` code against controlled DOM/media stubs; they are not browser/device acceptance tests.
 
 ## Unresolved verification and launch requirements
 
@@ -45,3 +47,13 @@ The suite has **25 named tests**, including HTTP/database workflows, real SSE si
 - This change replaces the CI behavior proposed in draft PR 44. Do not apply that older CI patch over this app's workflow.
 
 No claim is made that all possible defects have been eliminated. All defects reproduced in this review have passing regression coverage or a recorded workflow correction; the limits above remain explicit.
+
+## Golden ratio and the cause analysis
+
+The user's clarified reference is the **golden ratio**, not the ethical Golden Rule. Euclid's definition is the equality of the whole-to-larger and larger-to-smaller ratios: https://mathcs.clarku.edu/~djoyce/elements/bookVI/defVI3.html . With larger part a and smaller part b, (a+b)/a = a/b = phi, approximately 1.618034.
+
+The desktop room layout therefore gives the video/control column 1.618034 shares and the conversation column one share of the space remaining after the gap: approximately 61.8% / 38.2%. The longer registration form receives the larger share of the desktop account layout. Below 900 CSS pixels, both layouts stack. Video retains its native 16:9 display area. This is a geometric design choice; it does not prove faster software, better usability, or optimal resource use. Browser visual acceptance remains pending.
+
+The code defects have observable causes independent of that proportion: permissions and account state were reused after asynchronous boundaries, camera state was allowed to wait for network responses, stale callbacks crossed room/account boundaries, and LIVE state had no expiry. Their candidate fixes are checked by regression tests. The hosted CI restriction is external to these application paths. No mathematical proportion or application patch can clear that account restriction.
+
+Presence confirmations add one small POST per active broadcaster every 10 seconds, not one per viewer. Room reads check lease expiry immediately; the background sweep runs every 15 seconds. After 45 seconds without a confirmation, an expired broadcast is removed on the next read/sweep. This is a bounded presence signal, not proof of delivered video. Keep the broadcast tab open and active; sleep, heavy throttling, or loss of connectivity may end the broadcast. Re-enter to restart; old open tabs should reload after this upgrade.
