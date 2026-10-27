@@ -12,7 +12,7 @@ From the repository folder:
 bash self-hosted/start-local.sh
 ```
 
-On first start, enter an administrator email and a password of at least 12 characters. The password is entered without echoing it to the terminal. Open **http://localhost:3000**. Keep the terminal open; Control-C stops the app. On later starts the existing database is reused. If the app reports that Node.js is missing or the wrong version, install Node.js 24 LTS from https://nodejs.org/ first.
+On first start, enter an administrator email and a password of at least 12 characters. The password is entered without echoing it to the terminal. Open **http://localhost:3000**. Keep the terminal open; Control-C stops the app. On later starts the existing database is reused. Environment-supplied ADMIN_EMAIL and ADMIN_PASSWORD allow unattended first-start setup; PORT changes the default local URL. If the app reports that Node.js is missing or the wrong version, install Node.js 24 LTS from https://nodejs.org/ first.
 
 Do **not** run `npm install`: this edition has no dependencies to install. `npm start` at the repository root also works after first-time administrator setup.
 
@@ -49,6 +49,8 @@ The audio signature test only recognizes an MP3-like header. It is **not** a ful
 An adult checkbox records a self-declaration at registration, not identity verification. The app currently enforces acceptance to register but does not store a versioned legal-consent audit trail.
 
 ## Tests
+
+See [REPAIR_LOG.md](REPAIR_LOG.md) for the numbered defect review, reproductions, repairs, and unresolved verification. The suite now includes 17 named tests, including delayed HTTP request authorization, account/media races, room capacity, configuration validation, and actual startup subprocesses. Browser-code tests use controlled DOM/media stubs; they do not replace real-browser acceptance tests.
 
 ```bash
 npm run check
