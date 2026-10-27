@@ -24,7 +24,7 @@ Data lives in `self-hosted/data/`, outside Git. Never commit or publish that dir
 2. Register a performer in a separate browser profile/private window. Creator accounts start pending.
 3. Use the administrator's account queue to approve the performer **after** your identity, adult-status, consent, and rights review. The app does not perform that review for you. Refresh the creator page after approval.
 4. The performer can create one public room and one invitation-only room. Register a viewer, then invite that viewer by registered email to the private room.
-5. Both accounts enter the room. The performer selects **Enable camera & go live** and grants browser camera/microphone permissions. Other viewers receive the camera stream if network connectivity allows it. Muting the video avoids hearing the performer's microphone over the DJ feed.
+5. Both accounts enter the room. The performer selects **Enable camera & go live** and grants browser camera/microphone permissions. Other viewers receive the camera stream if network connectivity allows it. Keep the broadcasting tab open and active. Its authenticated heartbeat renews a 45-second live-status lease; loss of confirmation stops capture and requires room reconnection. Reload old tabs after upgrading. Muting the video avoids hearing the performer's microphone over the DJ feed.
 6. Chat, report a concern, revoke a guest's invitation, and inspect the administrator's report queue. Room access is checked on the server, not merely hidden in the UI.
 7. Register and approve a DJ. Upload a small MP3 (up to 20 MB) with rights confirmation. The administrator can preview pending audio and approve or reject it. An approved mix can then be selected for the shared feed. A direct HTTPS audio URL is also supported.
 8. Listeners select **Play / resync** once to permit browser audio. Recorded-file position is approximately synchronized using server time; it is not sample-accurate. Live URLs use their live edge and are not guaranteed synchronized.
@@ -38,7 +38,7 @@ The audio signature test only recognizes an MP3-like header. It is **not** a ful
 | Accounts | Scrypt password hashes, persistent sessions, HttpOnly cookies, logout, role checks |
 | Creator review | Performer/DJ approval, suspension, live-connection termination |
 | Rooms | One public and one invitation-only room per performer; server-enforced invitation access |
-| Camera | Browser WebRTC with authenticated SSE signaling; one broadcaster, up to 11 other connections per room |
+| Camera | Browser WebRTC with authenticated SSE signaling; one broadcaster, up to 11 other connections per room, authenticated live-presence expiry |
 | Conversation | Persistent room chat, bounded history, text rendered without HTML interpretation |
 | Moderation | Reports, resolution queue, creator approval, account suspension, audio review |
 | DJ audio | Local reviewed MP3 uploads with byte-range playback, shared track selection and playback state |
@@ -50,7 +50,7 @@ An adult checkbox records a self-declaration at registration, not identity verif
 
 ## Tests
 
-See [REPAIR_LOG.md](REPAIR_LOG.md) for the numbered defect review, reproductions, repairs, and unresolved verification. The suite now includes 25 named tests, including delayed HTTP request authorization, account/media races, room capacity, configuration validation, and actual startup subprocesses. Browser-code tests use controlled DOM/media stubs; they do not replace real-browser acceptance tests.
+See [REPAIR_LOG.md](REPAIR_LOG.md) for the numbered defect review, reproductions, repairs, and unresolved verification. The suite now includes 31 named tests, including delayed HTTP request authorization, account/media races, room capacity, configuration validation, and actual startup subprocesses. Browser-code tests use controlled DOM/media stubs; they do not replace real-browser acceptance tests.
 
 ```bash
 npm run check
