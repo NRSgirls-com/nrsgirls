@@ -18,14 +18,14 @@ function harness() {
   let fetcher = async () => ({ user: null });
   const context = vm.createContext({ document: { getElementById: element, createElement: tag => ({ ...element(`new-${elements.size}`), tagName: tag.toUpperCase() }), createTextNode: text => ({ textContent: text }) },
     fetch: async (...args) => { const data = await fetcher(...args); return { ok: !data.__status || data.__status < 400, status: data.__status || 200, json: async () => data }; },
-    setInterval() {}, window: { addEventListener() {} }, console,
-    RTCPeerConnection: class { close() {} }, location: { origin: 'http://localhost:3000' }, Date, FormData: class {} });
+    setInterval() {}, setTimeout, clearTimeout, AbortController, window: { addEventListener() {} }, console,
+    RTCPeerConnection: class { constructor() { this.transceivers = []; } close() {} addTrack() {} addTransceiver(track, options) { this.transceivers.push({ track, ...options }); } }, location: { origin: 'http://localhost:3000' }, Date, FormData: class {} });
   vm.runInContext(source, context);
   return { element, context, run: code => vm.runInContext(code, context), respond: fn => { fetcher = fn; } };
 }
 
 test('guarded click disables its button and rejects overlapping operations', async () => {
-  const h = harness(); await Promise.resolve();
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
   let finish, calls = 0; const operation = new Promise(resolve => { finish = resolve; });
   h.context.operation = async () => { calls++; await operation; };
   const button = h.element('button'); button.tagName = 'BUTTON';
@@ -37,7 +37,7 @@ test('guarded click disables its button and rejects overlapping operations', asy
 });
 
 test('withdrawing a DJ feed stops and clears browser audio', async () => {
-  const h = harness(); await Promise.resolve();
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
   h.run('djState = {url:"https://example.test/old.mp3", playing:true};');
   const audio = h.element('audio'); audio.src = 'https://example.test/old.mp3'; audio.paused = false;
   h.respond(async () => ({ state: null, serverTime: Date.now() }));
@@ -46,7 +46,7 @@ test('withdrawing a DJ feed stops and clears browser audio', async () => {
 });
 
 test('a playing listener resumes when the DJ changes tracks', async () => {
-  const h = harness(); await Promise.resolve();
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
   h.run('djState = {url:"https://example.test/old.mp3", playing:true};');
   h.element('audio').paused = false;
   h.respond(async () => ({ state: { url: 'https://example.test/new.mp3', playing: true, position: 0, updated: Date.now(), dj: 'DJ', title: 'New set' }, serverTime: Date.now() }));
@@ -54,7 +54,7 @@ test('a playing listener resumes when the DJ changes tracks', async () => {
 });
 
 test('stale room media events cannot overwrite the current video', async () => {
-  const h = harness(); await Promise.resolve();
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
   const pc = h.run('selected={id:"old"}; peerId="old-peer"; makePeer("other-peer")');
   h.run('roomGeneration++; selected={id:"new"}; peerId="new-peer";');
   pc.ontrack({ streams: [{ label: 'old private stream' }] });
@@ -105,4 +105,75 @@ test('an old unauthorized response cannot sign out a newer account', async () =>
   finish({ __status: 401, error: 'Sign in required' });
   await assert.rejects(loading, /Sign in required/);
   assert.equal(h.run('identity.id'), 'current');
+});
+
+test('sign-out stops capture immediately before the server responds', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  let stopped = 0, finish;
+  h.context.capture = { getTracks: () => [{ stop() { stopped++; } }] };
+  h.run('identity={id:"creator"}; csrf="token"; media=capture; selected={id:"room"}; peerId="peer";');
+  h.respond(() => new Promise(resolve => { finish = resolve; }));
+  const operation = h.element('logout').onclick({ preventDefault() {} });
+  try {
+    assert.equal(stopped, 1, 'camera must stop without waiting for the network');
+    assert.equal(h.run('identity'), null);
+  } finally { finish({ ok: true }); await operation; }
+});
+
+test('Stop broadcast stops capture immediately before the server responds', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  let stopped = 0, finish;
+  h.context.capture = { getTracks: () => [{ stop() { stopped++; } }] };
+  h.run('identity={id:"creator"}; media=capture; selected={id:"room"}; peerId="peer"; broadcaster=peerId;');
+  h.respond(() => new Promise(resolve => { finish = resolve; }));
+  const operation = h.element('stop-live').onclick({ preventDefault() {} });
+  try { assert.equal(stopped, 1, 'camera must stop without waiting for the network'); }
+  finally { finish({ ok: true }); await operation; }
+});
+
+test('network requests time out and release the operation', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  let timeout;
+  h.context.setTimeout = callback => { timeout = callback; return 1; };
+  h.context.clearTimeout = () => {};
+  h.respond((path, options) => new Promise((resolve, reject) => {
+    assert.ok(options.signal, 'requests need an abort signal');
+    options.signal.addEventListener('abort', () => reject(new Error('aborted')));
+  }));
+  const request = h.run('api("/api/rooms")');
+  const rejected = assert.rejects(request, /timed out/);
+  if (timeout) timeout();
+  await rejected;
+});
+
+test('the broadcaster sends media only and ignores viewer tracks', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  const capture = { getTracks: () => [{ kind: 'video' }, { kind: 'audio' }] };
+  h.context.capture = capture;
+  h.run('identity={id:"creator"}; media=capture; selected={id:"room"}; peerId="owner-peer"; broadcaster=peerId;');
+  h.element('video').srcObject = capture;
+  const pc = h.run('makePeer("viewer-peer")');
+  assert.equal(pc.transceivers.length, 2);
+  assert.ok(pc.transceivers.every(t => t.direction === 'sendonly'));
+  pc.ontrack({ streams: [{ label: 'unsolicited viewer camera' }] });
+  assert.equal(h.element('video').srcObject, capture);
+});
+
+test('a rejected room entry closes the unconnected room panel', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  h.run('identity={id:"viewer",approved:true};');
+  h.respond(async () => ({ __status: 404, error: 'Room unavailable' }));
+  await assert.rejects(h.run('enterRoom({id:"revoked",title:"Old private room",owner:"other",private:true})'), /Room unavailable/);
+  assert.equal(h.element('room').hidden, true);
+  assert.equal(h.run('selected'), null);
+});
+
+test('a failed broadcast stop closes signaling instead of leaving a false live session', async () => {
+  const h = harness(); await new Promise(resolve => setImmediate(resolve));
+  let closed = 0;
+  h.context.roomEvents = { close() { closed++; } };
+  h.run('identity={id:"creator"}; selected={id:"room"}; peerId="peer"; broadcaster=peerId; events=roomEvents;');
+  h.respond(async () => ({ __status: 503, error: 'Server unavailable' }));
+  await h.element('stop-live').onclick({ preventDefault() {} });
+  assert.equal(closed, 1); assert.equal(h.run('peerId'), null);
 });
