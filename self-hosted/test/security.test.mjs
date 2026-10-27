@@ -103,3 +103,19 @@ test('missing audio files return unavailable instead of an internal server error
   f.app.db.prepare('INSERT INTO mixes VALUES(?,?,?,?,?,?)').run(id, dj.user.id, 'Missing file', 'approved', 10, Date.now());
   assert.equal((await dj.request(`/api/media/${id}`)).status, 404);
 });
+
+test('malformed request targets return bad request instead of a server error', async t => {
+  const f = await fixture(t), target = new URL(f.origin);
+  const status = await new Promise((resolve, reject) => {
+    const req = http.get({ hostname: target.hostname, port: target.port, path: '//[' }, res => { res.resume(); resolve(res.statusCode); }); req.on('error', reject);
+  });
+  assert.equal(status, 400);
+});
+
+test('HEAD probes work for public health and static assets without login', async t => {
+  const f = await fixture(t);
+  for (const path of ['/api/health', '/', '/app.js', '/style.css']) {
+    const response = await fetch(f.origin + path, { method: 'HEAD' });
+    assert.equal(response.status, 200, path); assert.equal(await response.text(), '');
+  }
+});
