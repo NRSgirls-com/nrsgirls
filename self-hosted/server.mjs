@@ -149,18 +149,21 @@ export async function createApp(options = {}) {
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; media-src 'self' https: blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
     if (production) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
     try {
-      const url = new URL(req.url, origin), path = url.pathname;
+      let url;
+      try { url = new URL(req.url, origin); }
+      catch { fail(400, 'Invalid request target'); }
+      const path = url.pathname;
       if (req.headers.host !== new URL(origin).host) fail(403, 'Unexpected host');
       const mutation = !['GET', 'HEAD'].includes(req.method);
       if (mutation && req.headers.origin !== origin) fail(403, 'Origin rejected');
       if (!path.startsWith('/api/')) {
-        if (req.method !== 'GET') fail(405, 'Method not allowed');
+        if (!['GET', 'HEAD'].includes(req.method)) fail(405, 'Method not allowed');
         const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
         if (!files[path]) fail(404, 'Not found');
         const [file, type] = files[path];
         res.writeHead(200, { 'Content-Type': `${type}; charset=utf-8` }); return res.end(readFileSync(join(here, 'public', file)));
       }
-      if (req.method === 'GET' && path === '/api/health') return json(res, 200, { status: 'ok', database: get('SELECT 1 AS ok').ok === 1 });
+      if (['GET', 'HEAD'].includes(req.method) && path === '/api/health') return json(res, 200, { status: 'ok', database: get('SELECT 1 AS ok').ok === 1 });
       if (req.method === 'POST' && ['/api/register', '/api/login'].includes(path)) {
         rate(req, 'auth', 12, 900000);
         const b = await body(req);
