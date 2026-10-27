@@ -304,7 +304,8 @@ export async function createApp(options = {}) {
         if (!user.approved || !['dj', 'admin'].includes(user.role)) fail(403, 'Approved DJ account required');
         const b = await body(req), title = field(b.title, 'title', 100);
         if (b.rights !== true) fail(400, 'Confirm permission to broadcast this audio');
-        let audio; try { audio = new URL(b.url, origin); } catch { fail(400, 'Invalid audio URL'); }
+        const requestedUrl = field(b.url, 'audio URL', 2048);
+        let audio; try { audio = new URL(requestedUrl, origin); } catch { fail(400, 'Invalid audio URL'); }
         if (audio.username || audio.password) fail(400, 'Audio URLs cannot contain credentials');
         const localMix = audio.origin === origin && audio.pathname.match(/^\/api\/media\/([0-9a-f-]{36})$/);
         if (localMix) {
@@ -324,7 +325,7 @@ export async function createApp(options = {}) {
           const b = await body(req); if (!['pending', 'approved', 'rejected'].includes(b.state) || typeof b.id !== 'string') fail(400, 'Invalid mix review');
           run('UPDATE mixes SET state=? WHERE id=?', b.state, b.id); return json(res, 200, { ok: true });
         }
-        if (path === '/api/admin/users' && req.method === 'GET') return json(res, 200, { users: all('SELECT * FROM users ORDER BY created DESC').map(safeUser) });
+        if (path === '/api/admin/users' && req.method === 'GET') return json(res, 200, { users: all('SELECT * FROM users ORDER BY created DESC').map(u => ({ ...safeUser(u), email: u.email })) });
         if (path === '/api/admin/users' && req.method === 'POST') {
           const b = await body(req), target = get('SELECT * FROM users WHERE id=?', b.id);
           if (!target || target.role === 'admin') fail(400, 'Choose a non-admin account');
