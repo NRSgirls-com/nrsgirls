@@ -89,6 +89,9 @@ test('accounts, approval, room permissions, chat, DJ state and moderation persis
   assert.equal((await dj.request('/api/dj', 'POST', { ...track, url: 'javascript:alert(1)' })).status, 400);
   assert.equal((await dj.request('/api/dj', 'POST', track)).status, 200);
   assert.equal((await guest.request('/api/dj')).data.state.title, 'My mix');
+  await approve(dj, false);
+  assert.equal((await guest.request('/api/dj')).data.state, null, 'withdrawing DJ approval must withdraw their feed');
+  await approve(dj);
   const uploadHeaders = { origin, cookie: dj.cookie, 'X-CSRF-Token': dj.csrf, 'Content-Type': 'audio/mpeg', 'X-Track-Title': 'Test%20mix', 'X-Rights-Confirmed': 'true' };
   assert.equal((await fetch(address + '/api/mixes', { method: 'POST', headers: uploadHeaders, body: Buffer.from('not an mp3') })).status, 400);
   const audioBytes = Buffer.from('ID3\x04\x00\x00test fixture bytes');
@@ -102,6 +105,7 @@ test('accounts, approval, room permissions, chat, DJ state and moderation persis
   assert.equal((await dj.request('/api/dj', 'POST', { ...track, url: `/api/media/${mixId}` })).status, 200);
   await admin.request('/api/admin/mixes', 'POST', { id: mixId, state: 'rejected' });
   assert.equal((await guest.request(`/api/media/${mixId}`)).status, 404);
+  assert.equal((await guest.request('/api/dj')).data.state, null, 'withdrawing a mix must withdraw its feed');
   await dj.request('/api/dj', 'POST', track);
   assert.equal((await guest.request(`/api/rooms/${publicId}/report`, 'POST', { reason: 'Test report' })).status, 201);
   const report = (await admin.request('/api/admin/reports')).data.reports[0];
