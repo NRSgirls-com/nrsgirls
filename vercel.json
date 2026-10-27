@@ -1,5 +1,3 @@
 {
-  "version": 2,
-  "framework": "nextjs",
-  "rootDirectory": "nrsgirls-platform/frontend"
+  "git": { "deploymentEnabled": false }
 }
