@@ -18,6 +18,13 @@ The first implementation passed its broad API test but had defects that test did
 | 12 | Legacy CI referenced a nonexistent app directory; the release workflow attempted to install/publish a private app. | Use one Node 24 check/test workflow without dependency installation; release verification does not publish or deploy. Remove duplicate workflow. Local commands pass; hosted Actions execution is not verified. |
 | 13 | Viewers could fill every room slot before the broadcaster connected. | Reserve one slot for the owner. Real SSE capacity test fills audience slots, rejects overflow, and admits the broadcaster. |
 | 14 | A missing stored audio file produced a generic server error. | Return unavailable/404 for absent audio. HTTP regression with a missing media file. |
+| 15 | Sign-out and Stop Broadcast waited for the network before shutting off capture. | Stop camera/microphone tracks immediately, then confirm the server response separately. Two deferred-network client regressions. Offline sign-out does not claim server-session invalidation. |
+| 16 | Stalled requests could leave controls disabled indefinitely. | Use abortable 15-second request limits covering fetch and response decoding; apply the same handling to uploads. A controlled timeout regression verifies the operation exits. |
+| 17 | Broadcaster connections used bidirectional media and could replace the local preview with unsolicited viewer media. | Use send-only transceivers and ignore inbound tracks on the broadcaster. Client-code direction/preview regression. |
+| 18 | Rejected room entry left an unconnected room panel visible indefinitely. | Clear the failed room and ignore obsolete scrolling. Client-code revoked-room regression. |
+| 19 | Malformed HTTP request targets generated internal server errors. | Return 400 for invalid request URLs. Raw HTTP regression. |
+| 20 | Public HEAD health probes required login; static HEAD probes were rejected. | Support anonymous HEAD for health and static assets with empty response bodies. HTTP regressions cover all four public endpoints. |
+| 21 | An uncertain broadcast start/stop left its signaling session open. | Close signaling and require room reconnection after failure, while keeping capture off. A failed-stop regression verifies disconnection. A network partition can still delay the server learning a connection has closed; this is not a globally synchronized presence service. |
 
 ## Verification
 
@@ -28,11 +35,11 @@ bash -n self-hosted/start-local.sh
 git diff --check
 ```
 
-The suite has **17 named tests**, including HTTP/database workflows, real SSE signaling and capacity, delayed-body authorization regressions, isolated browser-code state tests with mocks, and real startup subprocesses. The client tests execute the actual `app.js` code against controlled DOM/media stubs; they are not browser/device acceptance tests.
+The suite has **25 named tests**, including HTTP/database workflows, real SSE signaling and capacity, delayed-body authorization regressions, isolated browser-code state tests with mocks, and real startup subprocesses. The client tests execute the actual `app.js` code against controlled DOM/media stubs; they are not browser/device acceptance tests.
 
 ## Unresolved verification and launch requirements
 
-- GitHub Actions reports failed runs, but the connector exposes no step details and the log download returns `BlobNotFound`. Their cause is not established. Local results do not establish hosted CI success.
+- GitHub Actions jobs are blocked before starting by an upstream account restriction, confirmed in the public run annotations. Application-code repairs cannot remove that restriction. No account or billing configuration was changed. Hosted CI remains blocked; local checks do not claim hosted CI success.
 - The cloud browser cannot reach this workspace's localhost server. Real browser layout, camera/audio permissions, codecs, and cross-device ICE/TURN remain unverified. Mock tests do not resolve these checks.
 - No public hosting, domain routing, TLS proxy, TURN relay, payment account, or paid service has been provisioned. See README.md for the remaining operational/commercial scope.
 - This change replaces the CI behavior proposed in draft PR 44. Do not apply that older CI patch over this app's workflow.
