@@ -1,3 +1,15 @@
+# Run the self-hosted NRSgirls app
+
+A dependency-free Node.js 24 edition is now in [`self-hosted/`](self-hosted/README.md). It provides persistent accounts, creator approval, public/private rooms, chat, reports, reviewed MP3 uploads, shared DJ playback state, and browser WebRTC signaling.
+
+```bash
+bash self-hosted/start-local.sh
+```
+
+No Vercel account or paid service is needed for local use. Read the setup guide for first-start administrator setup, verification results, and remaining public-launch requirements. The material below describes the older scaffold.
+
+---
+
 # NRSgirls.com — Founder Onboarding (Month 1)
 
 This repo contains the early scaffolding for a Chaturbate-class platform with our twist:

@@ -1,54 +1,21 @@
-name: CI
+name: Platform checks
 
 on:
   push:
-    branches: ['**']
   pull_request:
-    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  lint-and-test-and-build:
+  check-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js 18
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: |
-            frontend/nextjs/yarn.lock
-
-      - name: Enable Corepack
-        run: |
-          corepack enable
-          corepack prepare yarn@1.22.22 --activate
-
-      - name: Run setup script
-        run: |
-          if [ -f "nrsgirls-platform/scripts/setup.sh" ]; then
-            bash nrsgirls-platform/scripts/setup.sh
-          fi
-
-      - name: Install frontend dependencies
-        run: |
-          if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
-            cd frontend/nextjs
-            yarn install --frozen-lockfile
-          fi
-
-      - name: Lint and test frontend
-        run: |
-          if [ -f "nrsgirls-platform/scripts/lint-test.sh" ]; then
-            bash nrsgirls-platform/scripts/lint-test.sh
-          fi
-
-      - name: Build frontend
-        run: |
-          if [ -d "frontend/nextjs" ] && [ -f "frontend/nextjs/package.json" ]; then
-            cd frontend/nextjs
-            yarn build
-          fi
+          node-version: '24'
+      # No npm install/ci: this app has no third-party dependencies.
+      - run: npm run check
+      - run: npm test

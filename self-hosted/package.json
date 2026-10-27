@@ -1,0 +1,8 @@
+{
+  "name": "nrsgirls-self-hosted",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=24 <25" },
+  "scripts": { "start": "node server.mjs", "test": "node --test test/*.test.mjs", "check": "node --check server.mjs && node --check public/app.js" }
+}

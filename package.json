@@ -1,0 +1,10 @@
+{
+  "name": "nrsgirls",
+  "private": true,
+  "engines": { "node": ">=24 <25" },
+  "scripts": {
+    "start": "node self-hosted/server.mjs",
+    "test": "node --test self-hosted/test/*.test.mjs",
+    "check": "node --check self-hosted/server.mjs && node --check self-hosted/public/app.js"
+  }
+}
