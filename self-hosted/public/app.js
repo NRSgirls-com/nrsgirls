@@ -4,15 +4,27 @@ let identity = null, csrf = '', selected = null, events = null, peerId = null, m
 let iceServers = [], peers = new Map(), pending = new Map(), djState = null, offset = 0, roomGeneration = 0;
 let radioEnabled = false, radioTransition = false, djGeneration = 0, accountGeneration = 0;
 const notice = (text, error = false) => { $('status').textContent = text; $('status').classList.toggle('error', error); };
-async function api(path, method = 'GET', data) {
+async function request(path, options) {
   const generation = accountGeneration, account = identity?.id;
-  const response = await fetch(path, { method, headers: method === 'GET' ? {} : { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: data === undefined ? undefined : JSON.stringify(data) });
-  const result = await response.json();
-  if (!response.ok) {
-    if (response.status === 401 && generation === accountGeneration && account === identity?.id && !['/api/login', '/api/register'].includes(path)) applyIdentity({ user: null });
-    throw new Error(result.error || 'Request failed');
-  }
-  return result;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(path, { ...options, signal: controller.signal });
+    let result;
+    try { result = await response.json(); }
+    catch { if (controller.signal.aborted) throw new Error('Request timed out. Try again when connected.'); throw new Error('The server returned an invalid response. Try again when connected.'); }
+    if (!response.ok) {
+      if (response.status === 401 && generation === accountGeneration && account === identity?.id && !['/api/login', '/api/register'].includes(path)) applyIdentity({ user: null });
+      throw new Error(result.error || 'Request failed');
+    }
+    return result;
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('Request timed out. Try again when connected.');
+    throw error;
+  } finally { clearTimeout(timeout); }
+}
+async function api(path, method = 'GET', data) {
+  return request(path, { method, headers: method === 'GET' ? {} : { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: data === undefined ? undefined : JSON.stringify(data) });
 }
 const guarded = fn => async event => {
   event?.preventDefault();
@@ -45,7 +57,14 @@ $('register').addEventListener('submit', guarded(async () => {
   const b = fields($('register')); b.adult = $('register').elements.adult.checked; b.terms = $('register').elements.terms.checked;
   applyIdentity(await api('/api/register', 'POST', b)); $('register').reset(); notice('Account created.'); await refresh();
 }));
-$('logout').onclick = guarded(async () => { await api('/api/logout', 'POST', {}); leaveRoom(); applyIdentity({ user: null }); $('audio').pause(); $('audio').removeAttribute('src'); djState = null; notice('Signed out.'); });
+$('logout').onclick = guarded(async () => {
+  const ending = api('/api/logout', 'POST', {});
+  // Local privacy controls must work even if the network never responds.
+  leaveRoom(); applyIdentity({ user: null });
+  notice('Camera stopped. Confirming server sign-out…');
+  try { await ending; notice('Signed out.'); }
+  catch { notice('Camera stopped and local view cleared. Server sign-out could not be confirmed. Reconnect, reload, and sign out again.', true); }
+});
 async function refresh() {
   const generation = accountGeneration, account = identity?.id, result = await api('/api/me');
   if (generation !== accountGeneration || identity?.id !== account) return;
@@ -69,6 +88,10 @@ $('create-room').addEventListener('submit', guarded(async () => {
 }));
 function clearPeers() { for (const pc of peers.values()) pc.close(); peers.clear(); pending.clear(); }
 function stopMedia() { if (media) for (const track of media.getTracks()) track.stop(); media = null; clearPeers(); $('video').srcObject = null; $('stop-live').hidden = true; }
+function disconnectRoom(message) {
+  events?.close(); events = null; stopMedia(); peerId = null; broadcaster = null;
+  $('connection').textContent = message;
+}
 function leaveRoom() {
   ++roomGeneration;
   events?.close(); events = null; stopMedia(); selected = null; peerId = null; broadcaster = null; $('room').hidden = true;
@@ -80,11 +103,15 @@ function showMessage(message) {
   $('messages').append(li); while ($('messages').children.length > 100) $('messages').firstChild.remove(); $('messages').scrollTop = $('messages').scrollHeight;
 }
 async function enterRoom(room) {
+  if (!identity) throw new Error('Sign in required');
   leaveRoom(); selected = room; const generation = roomGeneration;
   $('room').hidden = false; $('room-title').textContent = room.title; $('messages').replaceChildren(); $('connection').textContent = 'Connecting…';
   $('go-live').hidden = !(room.owner === identity.id && identity.approved);
   $('owner-tools').hidden = !(room.private && (room.owner === identity.id || identity.role === 'admin'));
-  const messages = await api(`/api/rooms/${room.id}/messages`); if (generation !== roomGeneration) return;
+  let messages;
+  try { messages = await api(`/api/rooms/${room.id}/messages`); }
+  catch (error) { if (generation === roomGeneration) leaveRoom(); throw error; }
+  if (generation !== roomGeneration) return;
   messages.messages.forEach(showMessage);
   const stream = new EventSource(`/api/rooms/${room.id}/events`); events = stream;
   function event(type, fn) { stream.addEventListener(type, e => { if (generation !== roomGeneration) return; Promise.resolve().then(() => { if (generation === roomGeneration) return fn(JSON.parse(e.data)); }).catch(e => { if (generation === roomGeneration) notice(e.message, true); }); }); }
@@ -95,9 +122,9 @@ async function enterRoom(room) {
   event('broadcast-ended', () => { broadcaster = null; clearPeers(); if (!media) $('video').srcObject = null; $('connection').textContent = 'Broadcast ended.'; });
   event('peer-left', data => { peers.get(data.peer)?.close(); peers.delete(data.peer); pending.delete(data.peer); });
   event('signal', receiveSignal);
-  stream.onerror = () => { if (generation !== roomGeneration) return; stream.close(); stopMedia(); peerId = null; $('connection').textContent = 'Room disconnected. Re-enter the room to reconnect; access may have changed.'; };
+  stream.onerror = () => { if (generation !== roomGeneration) return; disconnectRoom('Room disconnected. Re-enter the room to reconnect; access may have changed.'); };
   if (!$('owner-tools').hidden) await loadGuests();
-  $('room').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (generation === roomGeneration) $('room').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 async function loadGuests() {
   const room = selected?.id, generation = roomGeneration;
@@ -119,9 +146,9 @@ function makePeer(id) {
   const context = roomContext();
   const pc = new RTCPeerConnection({ iceServers }); peers.set(id, pc);
   pc.onicecandidate = e => { if (e.candidate && currentRoom(context)) signal(id, 'candidate', e.candidate.toJSON(), context).catch(e => { if (currentRoom(context)) notice(e.message, true); }); };
-  pc.ontrack = e => { if (!currentRoom(context)) return; $('video').muted = false; $('video').srcObject = e.streams[0]; $('connection').textContent = 'Video connected. Use the player to enable sound if your browser blocks autoplay.'; };
+  pc.ontrack = e => { if (!currentRoom(context) || media || context.peer === broadcaster) return; $('video').muted = false; $('video').srcObject = e.streams[0]; $('connection').textContent = 'Video connected. Use the player to enable sound if your browser blocks autoplay.'; };
   pc.onconnectionstatechange = () => { if (currentRoom(context) && ['failed', 'disconnected'].includes(pc.connectionState)) $('connection').textContent = 'Video connection interrupted. A configured TURN relay may be needed on this network.'; };
-  if (media) media.getTracks().forEach(track => pc.addTrack(track, media));
+  if (media) media.getTracks().forEach(track => pc.addTransceiver(track, { direction: 'sendonly', streams: [media] }));
   return pc;
 }
 async function offer(id) {
@@ -159,14 +186,18 @@ $('go-live').onclick = guarded(async () => {
   // Set locally before the request: viewer notifications may arrive before the HTTP response.
   broadcaster = peerId;
   try { await api(`/api/rooms/${selected.id}/broadcast`, 'POST', { peer: peerId, live: true }); }
-  catch (e) { if (currentRoom(context)) { stopMedia(); broadcaster = null; throw e; } return; }
+  catch (e) { if (currentRoom(context)) { disconnectRoom('Camera stopped. Re-enter the room before broadcasting again.'); throw e; } return; }
   if (!currentRoom(context)) return;
   $('go-live').hidden = true; $('stop-live').hidden = false; $('connection').textContent = 'You are broadcasting. Keep this tab open.';
 });
 $('stop-live').onclick = guarded(async () => {
   const context = roomContext();
-  try { await api(`/api/rooms/${context.room}/broadcast`, 'POST', { peer: context.peer, live: false }); }
-  finally { if (currentRoom(context)) { stopMedia(); broadcaster = null; $('go-live').hidden = false; } }
+  const ending = api(`/api/rooms/${context.room}/broadcast`, 'POST', { peer: context.peer, live: false });
+  stopMedia(); broadcaster = null;
+  $('connection').textContent = 'Camera stopped locally. Confirming broadcast end…';
+  try { await ending; if (currentRoom(context)) $('connection').textContent = 'Broadcast ended.'; }
+  catch (error) { if (currentRoom(context)) disconnectRoom('Camera stopped. Re-enter the room to reconnect after the server error.'); throw error; }
+  finally { if (currentRoom(context)) $('go-live').hidden = false; }
 });
 async function loadDj() {
   const generation = ++djGeneration, account = identity?.id;
@@ -220,8 +251,7 @@ async function loadMixes() {
 $('upload-form').addEventListener('submit', guarded(async () => {
   const form = $('upload-form'), file = form.elements.file.files[0];
   if (!file || file.size > 20 * 1024 * 1024) throw new Error('Choose an MP3 no larger than 20 MB');
-  const response = await fetch('/api/mixes', { method: 'POST', headers: { 'Content-Type': 'audio/mpeg', 'X-CSRF-Token': csrf, 'X-Track-Title': encodeURIComponent(form.elements.title.value), 'X-Rights-Confirmed': String(form.elements.rights.checked) }, body: file });
-  const result = await response.json(); if (!response.ok) throw new Error(result.error);
+  await request('/api/mixes', { method: 'POST', headers: { 'Content-Type': 'audio/mpeg', 'X-CSRF-Token': csrf, 'X-Track-Title': encodeURIComponent(form.elements.title.value), 'X-Rights-Confirmed': String(form.elements.rights.checked) }, body: file });
   form.reset(); await loadMixes(); notice('Mix uploaded and waiting for administrator review.');
 }));
 async function loadAdmin() {
