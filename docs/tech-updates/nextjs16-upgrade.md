@@ -30,7 +30,7 @@
 - `unstable_rootParams`, experimental PPR flags, and next/legacy/image are removed/deprecated.
 
 ## Repo-specific to-dos
-- [ ] Confirm `frontend/nextjs` uses Node 20.9+ in CI/local and TypeScript 5.1+.
+- [ ] Confirm `nrsgirls-platform/frontend` uses Node 20.9+ in CI/local and TypeScript 5.1+.
 - [ ] If we still have `middleware.ts`, rename to `proxy.ts` and update the export.
 - [ ] Audit API routes/pages for single-argument `revalidateTag` calls; add a cacheLife profile or switch to `updateTag`/`refresh` in Server Actions.
 - [ ] Enable `cacheComponents` once we validate cache key strategy for our pages.

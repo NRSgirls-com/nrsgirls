@@ -31,7 +31,5 @@ install_if_pkg() {
 # Install platform frontend/backend if they exist
 install_if_pkg nrsgirls-platform/frontend
 install_if_pkg nrsgirls-platform/backend
-# Install root-level frontend/nextjs
-install_if_pkg frontend/nextjs
 echo "Setup complete. Edit .env and run the services you need.
 "

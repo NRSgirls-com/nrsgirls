@@ -1,39 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+FRONTEND="$ROOT/nrsgirls-platform/frontend"
 
-# Root-level frontend/nextjs
-if [ -d "$ROOT/frontend/nextjs" ] && [ -f "$ROOT/frontend/nextjs/package.json" ]; then
-  cd "$ROOT/frontend/nextjs"
-  if grep -q ""lint"" package.json; then
-    if command -v yarn >/dev/null 2>&1; then yarn lint; else npm run lint; fi || true
-  fi
-  if grep -q ""test"" package.json; then
-    if command -v yarn >/dev/null 2>&1; then yarn test; else npm test; fi || true
-  fi
+if [ ! -f "$FRONTEND/package.json" ]; then
+  echo "Frontend package.json not found: $FRONTEND" >&2
+  exit 1
 fi
 
-# Platform frontend
-if [ -d "$ROOT/nrsgirls-platform/frontend" ] && [ -f "$ROOT/nrsgirls-platform/frontend/package.json" ]; then
-  cd "$ROOT/nrsgirls-platform/frontend"
-  if grep -q ""lint"" package.json; then
-    if command -v yarn >/dev/null 2>&1; then yarn lint; else npm run lint; fi || true
-  fi
-  if grep -q ""test"" package.json; then
-    if command -v yarn >/dev/null 2>&1; then yarn test; else npm test; fi || true
-  fi
-fi
+run_checks() {
+  local dir="$1"
+  local task
+  [ -f "$dir/package.json" ] || return 0
+  for task in lint test; do
+    if (cd "$dir" && node -e 'const p = require("./package.json"); process.exit(p.scripts && p.scripts[process.argv[1]] ? 0 : 1)' "$task"); then
+      echo "Running $task in $dir"
+      if command -v yarn >/dev/null 2>&1; then
+        (cd "$dir" && yarn run "$task")
+      else
+        (cd "$dir" && npm run "$task")
+      fi
+    fi
+  done
+}
 
-# Platform backend
-if [ -d "$ROOT/nrsgirls-platform/backend" ] && [ -f "$ROOT/nrsgirls-platform/backend/package.json" ]; then
-  cd "$ROOT/nrsgirls-platform/backend"
-  if grep -q ""lint"" package.json; then
-    if command -v yarn >/dev/null 2>&1; then yarn lint; else npm run lint; fi || true
-  fi
-  if grep -q ""test"" package.json; then
-    if command -v yarn >/dev/null 2>&1; then yarn test; else npm test; fi || true
-  fi
-fi
-
-echo "Lint/test tasks executed (best-effort).
-"
+run_checks "$FRONTEND"
+run_checks "$ROOT/nrsgirls-platform/backend"
+echo "Configured lint/test tasks passed."
